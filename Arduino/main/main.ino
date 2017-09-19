@@ -10,7 +10,7 @@
 /**
  * Should we create a data structure to store the data?
  */
-
+int ARM_ID = 0, GYRO_ID = 1, THIGH_ID = 2;
 int accelx_hand_value = 0;
 int accely_hand_value = 0;
 int accelz_hand_value = 0;
@@ -28,6 +28,8 @@ int NAK = 1;
 int HELLO = 2;
 int reply;
 int handshake_flag;
+
+int data = 0;
 
 SemaphoreHandle_t semaphore = xSemaphoreCreateBinary();
 
@@ -87,6 +89,7 @@ void sendDataToRaspberryPi(void *p){
   const TickType_t xPeriod = 500;
 
   for(;;){
+    
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
       xSemaphoreGive(semaphore);
       /**
