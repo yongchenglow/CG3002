@@ -1,9 +1,9 @@
 import serial
 import time
 
-ser = serial.Serial('/dev/ttyACM1',9600)
-HELLO = "\x02"
-ACK = "\x00"
+ser = serial.Serial('/dev/ttyS0',9600)
+HELLO = b"\x02"
+ACK = b"\x00"
 handshake_flag = True
 
 while handshake_flag:
@@ -14,4 +14,4 @@ while handshake_flag:
     if (reply == 0):
         handshake_flag = False
         ser.write(ACK)
-        print "Handshake completed"
+        print('Handshake completed')

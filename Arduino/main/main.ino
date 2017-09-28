@@ -4,7 +4,8 @@
 #include <task.h>
 #include <semphr.h>
 #include <queue.h>
-#include <CRCGenerator.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define STACK_SIZE    200
 
@@ -38,10 +39,10 @@ void handshake() {
   int handshake_flag = 1;
   
   while (handshake_flag == 1) {
-    if (Serial.available()) {
-      reply = Serial.read();
+    if (Serial1.available()) {
+      reply = Serial1.read();
       if (reply == HELLO) {
-        Serial.println(ACK);
+        Serial1.println(ACK);
       }
       if (reply == ACK) {
         handshake_flag = 0;
@@ -64,6 +65,18 @@ void readDataFromSensors(void *p){
        * 2) Package the data
        * 3) Store the data
        */
+      //Accelerometer Hand Values
+      accelx_hand_value = rand()*65536;
+      accely_hand_value = rand()*65536;
+      accelz_hand_value = rand()*65536;
+      
+      gyrox_value = rand()*65536;
+      gyroy_value = rand()*65536;
+      gyroz_value = rand()*65536;
+      
+      accelx_thigh_value = rand()*65536;
+      accely_thigh_value = rand()*65536;
+      accelz_thigh_value = rand()*65536;
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod);
   }
@@ -100,7 +113,7 @@ void sendDataToRaspberryPi(void *p){
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial1.begin(9600);
   handshake();
 }
 
