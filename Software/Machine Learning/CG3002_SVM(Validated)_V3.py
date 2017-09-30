@@ -14,7 +14,7 @@ from sklearn.preprocessing import label_binarize
 from sklearn.cross_validation import cross_val_score
 from sklearn.metrics import confusion_matrix
 
-df = pd.read_csv('file:///C:/Users/Daryl/Desktop/Year 3 Sem 1/CG3002/Code/filtered_activities.csv')
+df = pd.read_csv('file:///C:/Users/Daryl/Desktop/Year 3 Sem 1/CG3002/Code/Filtering/filtered_activities.csv')
 
 
 y = pd.DataFrame(df['LABELS'])
@@ -44,7 +44,7 @@ nRows = segmented_df.shape[1]
 nColumns = segmented_df.shape[2]
 
 ##### Mean of raw data #####
-Mean_list = []
+mean_list = []
 for i in range(nLayers):
     sliceLayer = segmented_df[i,::] 
     row = []
@@ -52,8 +52,8 @@ for i in range(nLayers):
         temp = sliceLayer[:,j] 
         mean = np.mean(temp)
         row = np.append(row, [mean])
-    Mean_list = np.append(Mean_list, row)
-Mean_list = Mean_list.reshape((nLayers, nColumns))
+    mean_list = np.append(mean_list, row)
+mean_list = mean_list.reshape((nLayers, nColumns))
 
 ##### std of raw data #####
 std_list = []
@@ -67,6 +67,26 @@ for i in range(nLayers):
     std_list = np.append(std_list, row)
 std_list = std_list.reshape((nLayers, nColumns))
 
+median_list = []
+for i in range(nLayers):
+    sliceLayer = segmented_df[i,::] 
+    row = []
+    for j in range(nColumns):
+        temp = sliceLayer[:,j] 
+        median = np.median(temp)
+        row = np.append(row, [median])
+    median_list = np.append(median_list, row)
+median_list = median_list.reshape((nLayers, nColumns))
+
+#####Feature List#####
+slice_mean = mean_list[:]
+slice_std = std_list[:]
+slice_median = median_list[:]
+feature_list = np.hstack((slice_mean, slice_std, slice_median))
+    
+
+
+
 ##### labels #####
 y_list = []
 y = y.reshape(180000, 1)
@@ -78,34 +98,37 @@ nColumns = y.shape[2]
 print(nLayers)
 ##### Convert 3d to 2d #####
 for i in range(nLayers):
-    sliceLayer = y[i,::]
+    sliceLayer = y[i,::] #loop through each layer
     row = []
-    for j in range(nColumns):
-        temp = sliceLayer[:,j:] 
-        
+    for j in range(nColumns): #nColumns = 3, loop through each column in each layer of 125 rows
+        temp = sliceLayer[:,j:] #temp = 125 rows for the jth column
         mean = np.mean(temp)
         row = np.append(row, [mean])
     y_list = np.append(y_list, row)
 
-y_list = y_list.reshape((nLayers,))
-print (y_list)
-#print (y_list.shape)
 
-X_train, X_test, y_train, y_test = cross_validation.train_test_split(Mean_list,
-                                                   y_list, test_size = 0.4)
-#print (X_train.shape)
-#print (y_train.shape)
-#print (X_test.shape)
-#print (y_test.shape)
 
+
+#mean_list = pd.DataFrame(mean_list, columns =["X_mean","Y_mean", "Z_mean"])
+#std_list = pd.DataFrame(std_list, columns = ["X_std", "Y_std", "Z_std"])
+#print(pd.merge(mean_list, std_list, left_on ="X_mean", right_on = "X_std"))
+#print (mean_list)
+#print(std_list)
+
+
+X_train, X_test, y_train, y_test = cross_validation.train_test_split(mean_list,
+                                                   y_list, test_size = 0.5)
+print (X_train.shape)
+print (y_train.shape)
+print (X_test.shape)
+print (y_test.shape)
 clf = SVC()
 clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
-validate_score = cross_val_score(clf, Mean_list, y_list, cv= 5)
+validate_score = cross_val_score(clf, mean_list, y_list, cv= 5)
 y_predict = clf.predict(X_test)
 
 cm = confusion_matrix(y_test, y_predict)
-#print (cm)
 matrix = metrics.confusion_matrix(y_test, y_predict)
 accuracy_rate_2 = metrics.accuracy_score(y_test, y_predict)
 sensitivity_rate = metrics.recall_score(y_test, y_predict, average= 'macro')
