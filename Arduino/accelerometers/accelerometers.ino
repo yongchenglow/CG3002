@@ -1,4 +1,6 @@
-#include <Wire.h>
+#include "I2Cdev.h"
+#include "MPU6050.h"
+#include "Wire.h"
 const int MPU_addr = 0x69; //I2C address of MPU-6050 when AD0 is low
 int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
 int accFirst = 30;
@@ -9,9 +11,6 @@ void setup() {
   pinMode(accFirst, OUTPUT);
   pinMode(accSec, OUTPUT);
   pinMode(accThird, OUTPUT);
-  digitalWrite(accFirst, HIGH); // Address set to 0x69 if AD0 is set to HIGH
-  digitalWrite(accSec, LOW); // Address set to 0x68 if AD0 is set to LOW
-  digitalWrite(accThird, LOW);
    
   Wire.begin();
   Wire.beginTransmission(MPU_addr);
@@ -23,28 +22,31 @@ void setup() {
 }
 
 void loop() {
+  // Change to reading of first accelerometer
+  digitalWrite(accFirst, HIGH);
+  digitalWrite(accSec, LOW);
+  digitalWrite(accThird, LOW);
   Serial.print("First Accelerometer\n");
   readAccele();
   
   // Change to reading of second accelerometer
   digitalWrite(accFirst, LOW);
   digitalWrite(accSec, HIGH);
+  digitalWrite(accThird, LOW);
   delay(1000);
   
   Serial.print("Second Accelerometer\n");
   readAccele();
 
   // Change to reading of third accelerometer
+  digitalWrite(accFirst, LOW);
   digitalWrite(accSec, LOW);
   digitalWrite(accThird, HIGH);
   delay(1000);
 
   Serial.print("Third Accelerometer\n");
   readAccele();
-
-  // Change to reading of first accelerometer
-  digitalWrite(accThird, LOW);
-  digitalWrite(accFirst, HIGH);
+  
   delay(5000);
 }
 
