@@ -158,7 +158,7 @@ accuracy = pd.DataFrame([accuracy_rate_1],columns = ['ACCURACY'])
 accuracy.rename(index ={0:'ACCURACY'}, inplace = True)
 results = results.append(accuracy)
 results = results.fillna('')
-results.to_csv('accuracy_matrix.csv')
+results.to_csv('accuracy_matrix_SVM.csv')
 
 
 
