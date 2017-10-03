@@ -87,8 +87,8 @@ int16_t getCheckSum(int16_t *package) {
  */
 void serialize(int16_t *_buffer){
   int16_t checksum = 0;
-  _buffer[0] = 16;
-  memcpy(_buffer+1, &data, (size_t) 16);
+  _buffer[0] = 17;
+  memcpy(_buffer+1, &data, (size_t) sizeof(data));
   for(int i = 1; i <= 16; i++){
     checksum ^= _buffer[i];
   } 
@@ -160,7 +160,7 @@ void sendDataToRaspberryPi(void *p){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){ 
       int16_t _buffer[18];
       serialize(_buffer);
-      for(int i=0; i < 17; i++)
+      for(int i=0; i <= 17; i++)
         Serial.println(_buffer[i]);
       xSemaphoreGive(semaphore);
     }
