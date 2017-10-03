@@ -68,21 +68,6 @@ void handshake() {
 }
 
 /**
- * Method to calculate checkSum
- * checkSum = b1 XOR b2 ... XOR bn
- */
-int16_t getCheckSum(int16_t *package) {
-  int16_t value = 0;
-  int16_t checkSum = 0;  
- 
-  for (int i = 1; i < package[0]; i++) {
-    value = package[i];
-    checkSum ^= value;
-  }
-  return checkSum;
-}
-
-/**
  * Method to serialize the data packet
  */
 void serialize(int16_t *_buffer){
