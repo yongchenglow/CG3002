@@ -109,19 +109,12 @@ for i in range(nLayers):
 
 
 
-#mean_list = pd.DataFrame(mean_list, columns =["X_mean","Y_mean", "Z_mean"])
-#std_list = pd.DataFrame(std_list, columns = ["X_std", "Y_std", "Z_std"])
-#print(pd.merge(mean_list, std_list, left_on ="X_mean", right_on = "X_std"))
-#print (mean_list)
-#print(std_list)
+
 
 
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(mean_list,
                                                    y_list, test_size = 0.5)
-print (X_train.shape)
-print (y_train.shape)
-print (X_test.shape)
-print (y_test.shape)
+
 clf = SVC()
 clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
@@ -157,3 +150,16 @@ print(matrix)
 print(sensitivity_rate)
 print(precision_rate)
 print(f1_score)
+
+results = pd.DataFrame(cm, columns = ['SITTING', 'WALKING', 'JUMPING'])
+
+results.rename(index ={0:'SITTING', 1:'WALKING', 2: 'JUMPING' }, inplace = True)
+accuracy = pd.DataFrame([accuracy_rate_1],columns = ['ACCURACY'])
+accuracy.rename(index ={0:'ACCURACY'}, inplace = True)
+results = results.append(accuracy)
+results = results.fillna('')
+results.to_csv('accuracy_matrix.csv')
+
+
+
+print (results)
