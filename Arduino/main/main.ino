@@ -23,6 +23,7 @@ typedef struct DataPacket{
   int16_t powerID;
   int16_t voltage;
   int16_t current;
+  int16_t power;
 } DataPacket;
 
 /* Packet Declaration */
@@ -40,7 +41,7 @@ SemaphoreHandle_t semaphore = xSemaphoreCreateBinary();
  * Initialise the data Packet with some values
  */
 void initializeDataPacket(){
-  data.type = DATA_RESP;
+  data.type = WRITE;
   data.armID = ARM_ID;
   data.gyroID = GYRO_ID;
   data.thighID = THIGH_ID;
@@ -72,9 +73,8 @@ void handshake() {
  */
 void Serial1ize(int16_t *_buffer){
   int16_t checksum = 0;
-  _buffer[0] = 17;
-  memcpy(_buffer+1, &data, (size_t) sizeof(data));
-  for(int i = 1; i <= 16; i++){
+  memcpy(_buffer, &data, (size_t) sizeof(data));
+  for(int i = 0; i <= 16; i++){
     checksum ^= _buffer[i];
   } 
   _buffer[17] = checksum;
@@ -125,6 +125,7 @@ void getPower(void *p){
       /* Power Circuit Values */
       data.voltage = rand()-rand();
       data.current = rand()-rand();
+      data.power = rand()-rand();
       xSemaphoreGive(semaphore);
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod);
@@ -145,28 +146,28 @@ void sendDataToRaspberryPi(void *p){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){ 
       int trys = 0;
       int reply;
+
       // Loop once if not received
-      while (trys < 3){
+      while (trys < 2){
+        Serial.println(trys);
         int16_t _buffer[18];
         Serial1ize(_buffer);
         for(int i=0; i <= 17; i++)
           Serial1.println(_buffer[i]);
+
+        if(!Serial1.available()){
+          vTaskDelay(10);
+        }
         
         if (Serial1.available()) {
-            reply = Serial1.read();
+          reply = Serial1.read();
           if (reply == ACK) {
             trys = 10;
-            xSemaphoreGive(semaphore);
-          } else {
-            trys++;
           }
-        } else {
-          trys++;
         }
+        trys++;
       }
-      if(trys == 3)
-        xSemaphoreGive(semaphore);
-      
+      xSemaphoreGive(semaphore);
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod);
   }
@@ -174,6 +175,7 @@ void sendDataToRaspberryPi(void *p){
 
 void setup() {
   Serial1.begin(9600);
+  Serial.begin(9600);
   handshake();
   initializeDataPacket();
   xSemaphoreGive(semaphore);
