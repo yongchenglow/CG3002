@@ -10,17 +10,16 @@ actions = ['busdriver', 'frontback', 'jumping', 'jumpingjack', 'sidestep',
            'squatturnclap', 'turnclap', 'wavehands', 'windowcleaner360',
            'windowcleaning', 'logout  ']
 
-def read(port):
-        i = 0
+def read(ip, port):
+        i = 0.0
         s = socket.socket()
-        host = '10.213.28.223'
-        s.connect((host,port))
+        s.connect((ip,port))
         print('connected')
         time.sleep(4)
         
         while True:
-            data = str(i)
-            msg = '#' + actions[i] + '|' + data + '|' + data + '|' + data + '|' + data        
+            data = repr(i)
+            msg = '#' + actions[int(i)] + '|' + data + '|' + data + '|' + data + '|' + data        
             length = 16 - (len(msg) % 16);
             msg += length * ' '
             
@@ -36,7 +35,14 @@ def read(port):
             else:
                 time.sleep(1)
 
+if len(sys.argv) != 3:
+    print('Invalid number of arguments')
+    print('python client_pi.py [IP address] [Port]')
+    sys.exit()
+
+ip = sys.argv[1]
+port = int(sys.argv[2])
+
 if __name__ == '__main__':
-    port = 58198
     print('Checking TCP socket')
-    read(port)
+    read(ip, port)
