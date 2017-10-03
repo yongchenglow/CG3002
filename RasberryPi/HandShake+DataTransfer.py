@@ -2,7 +2,7 @@ import serial
 import time
 
 # Set up th serial port
-ser = serial.Serial('/dev/ttyACM1',9600)
+ser = serial.Serial('/dev/ttyS0',9600)
 
 # Declare the Packet Codes for the Packet Type
 ACK = b"\x00"
@@ -30,7 +30,8 @@ while True:
     dataList = []
     
     # Read the length of the Data Packet
-    dataList.append(int(ser.readline()))
+    test = int(ser.readline())
+    dataList.append(test)
     
     # Read in the other values of the Data Packet
     for i in range(1, 17):

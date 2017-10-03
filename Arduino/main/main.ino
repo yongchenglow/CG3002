@@ -10,41 +10,42 @@
 #define STACK_SIZE    200
 
 /**
- * Create a data structure to store the data?
+ * DataPacket Structure
  */
+typedef struct DataPacket{
+  int16_t type;
+  int16_t armID;
+  int16_t accelHand[3];
+  int16_t gyroID;
+  int16_t gyroscope[3];
+  int16_t thighID;
+  int16_t accelThigh[3];
+  int16_t powerID;
+  int16_t voltage;
+  int16_t current;
+} DataPacket;
+
+/* Packet Declaration */
+DataPacket data;
 
 /* Device ID */
-int ARM_ID = 0, GYRO_ID = 1, THIGH_ID = 2, POWER_ID = 3;
+int16_t ARM_ID = 0, GYRO_ID = 1, THIGH_ID = 2, POWER_ID = 3;
 
 /* Packet code */
-int ACK = 0, NAK = 1, HELLO = 2, READ = 3, WRITE = 4, DATA_RESP = 5;
-
-/* Hand Accelerometer Value */
-int16_t accelx_hand_value = 0;
-int16_t accely_hand_value = 0;
-int16_t accelz_hand_value = 0;
-
-/* Gyroscope Value */
-int16_t gyrox_value = 0;
-int16_t gyroy_value = 0;
-int16_t gyroz_value = 0;
-
-/* Thigh Accelerometer Value */
-int16_t accelx_thigh_value = 0;
-int16_t accely_thigh_value = 0;
-int16_t accelz_thigh_value = 0;
-
-/* Power Circuit Values */
-int16_t voltage = 0;
-int16_t current = 0;
-
-/** 
- *  Byte Array for Sending Data
- *  int16_t to take in a value between -32768 to 32767
- */
-int16_t package[20];
+int16_t ACK = 0, NAK = 1, HELLO = 2, READ = 3, WRITE = 4, DATA_RESP = 5;
 
 SemaphoreHandle_t semaphore = xSemaphoreCreateBinary();
+
+/**
+ * Initialise the data Packet with some values
+ */
+void initializeDataPacket(){
+  data.type = DATA_RESP;
+  data.armID = ARM_ID;
+  data.gyroID = GYRO_ID;
+  data.thighID = THIGH_ID;
+  data.powerID = POWER_ID;
+}
 
 /**
  * Handshake with RaspberryPI
@@ -54,10 +55,10 @@ void handshake() {
   int handshake_flag = 1;
   
   while (handshake_flag == 1) {
-    if (Serial.available()) {
-      reply = Serial.read();
+    if (Serial1.available()) {
+      reply = Serial1.read();
       if (reply == HELLO) {
-        Serial.println(ACK);
+        Serial1.println(ACK);
       }
       if (reply == ACK) {
         handshake_flag = 0;
@@ -67,20 +68,16 @@ void handshake() {
 }
 
 /**
- * Method to calculate checkSum
- * checkSum = b1 XOR b2 ... XOR bn
+ * Method to Serial1ize the data packet
  */
-int16_t getCheckSum(int16_t *package) {
-  int i;
-  int upperLimit = package[0];
-  int16_t value = 0;
-  int16_t checkSum = 0;  
- 
-  for (i = 1; i < upperLimit; i++) {
-    value = package[i];
-    checkSum ^= value;
-  }
-  return checkSum;
+void Serial1ize(int16_t *_buffer){
+  int16_t checksum = 0;
+  _buffer[0] = 17;
+  memcpy(_buffer+1, &data, (size_t) sizeof(data));
+  for(int i = 1; i <= 16; i++){
+    checksum ^= _buffer[i];
+  } 
+  _buffer[17] = checksum;
 }
 
 /**
@@ -89,25 +86,25 @@ int16_t getCheckSum(int16_t *package) {
  */
 void readDataFromSensors(void *p){
   static TickType_t xLastWakeTime = xTaskGetTickCount();
-  const TickType_t xPeriod = 500;
+  const TickType_t xPeriod = 100;
 
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
-       
+      
       /* Accelerometer Hand Values */
-      accelx_hand_value = rand()-rand();
-      accely_hand_value = rand()-rand();
-      accelz_hand_value = rand()-rand();
+      data.accelHand[0] = rand()-rand();
+      data.accelHand[1] = rand()-rand();
+      data.accelHand[2] = rand()-rand();
 
       /* Gyroscope Values */
-      gyrox_value = rand()-rand();
-      gyroy_value = rand()-rand();
-      gyroz_value = rand()-rand();
+      data.gyroscope[0] = rand()-rand();
+      data.gyroscope[1] = rand()-rand();
+      data.gyroscope[2] = rand()-rand();
 
       /* Accelerometer Thigh Values */
-      accelx_thigh_value = rand()-rand();
-      accely_thigh_value = rand()-rand();
-      accelz_thigh_value = rand()-rand();
+      data.accelThigh[0] = rand()-rand();
+      data.accelThigh[1] = rand()-rand();
+      data.accelThigh[2] = rand()-rand();
 
       xSemaphoreGive(semaphore);
     }
@@ -119,15 +116,15 @@ void readDataFromSensors(void *p){
  * Method to read data from the power circuit
  * Variables obtained: Voltage and Current
  */
-void getVoltage(void *p){
+void getPower(void *p){
   static TickType_t xLastWakeTime = xTaskGetTickCount();
-  const TickType_t xPeriod = 500;
+  const TickType_t xPeriod = 100;
 
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
       /* Power Circuit Values */
-      voltage = rand()-rand();
-      current = rand()-rand();
+      data.voltage = rand()-rand();
+      data.current = rand()-rand();
       xSemaphoreGive(semaphore);
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod);
@@ -142,50 +139,48 @@ void getVoltage(void *p){
  */
 void sendDataToRaspberryPi(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
-  const TickType_t xPeriod = 500;
+  const TickType_t xPeriod = 100;
   
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){ 
-
-      /* Standard Data packaging*/
-      package[0] = 17;
-      package[1] = DATA_RESP;
-      package[2] = ARM_ID;
-      package[3] = accelx_hand_value;
-      package[4] = accely_hand_value;
-      package[5] = accelz_hand_value;
-      package[6] = GYRO_ID;
-      package[7] = gyrox_value;
-      package[8] = gyroy_value;
-      package[9] = gyroz_value;
-      package[10] = THIGH_ID;
-      package[11] = accelx_thigh_value;
-      package[12] = accely_thigh_value;
-      package[13] = accelz_thigh_value;
-      package[14] = POWER_ID;
-      package[15] = voltage;
-      package[16] = current;
-      package[17] = getCheckSum(package);
-
-      /* Send Packaged data */
-      for( int i = 0; i <= package[0]; i++){
-        Serial.println(package[i]);
+      int trys = 0;
+      int reply;
+      // Loop once if not received
+      while (trys < 3){
+        int16_t _buffer[18];
+        Serial1ize(_buffer);
+        for(int i=0; i <= 17; i++)
+          Serial1.println(_buffer[i]);
+        
+        if (Serial1.available()) {
+            reply = Serial1.read();
+          if (reply == ACK) {
+            trys = 10;
+            xSemaphoreGive(semaphore);
+          } else {
+            trys++;
+          }
+        } else {
+          trys++;
+        }
       }
+      if(trys == 3)
+        xSemaphoreGive(semaphore);
       
-      xSemaphoreGive(semaphore);
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod);
   }
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial1.begin(9600);
   handshake();
+  initializeDataPacket();
   xSemaphoreGive(semaphore);
   
   /* Task Creation */
   xTaskCreate(readDataFromSensors, "readDataFromSensors", STACK_SIZE, (void *) NULL, 3, NULL);
-  xTaskCreate(getVoltage, "getVoltage", STACK_SIZE, (void *) NULL, 2, NULL);
+  xTaskCreate(getPower, "getPower", STACK_SIZE, (void *) NULL, 2, NULL);
   xTaskCreate(sendDataToRaspberryPi, "sendDataToRaspberryPi", STACK_SIZE, (void *) NULL, 1, NULL);
   vTaskStartScheduler();
 }
