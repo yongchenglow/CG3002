@@ -116,7 +116,7 @@ void readDataFromSensors(void *p){
  * Method to read data from the power circuit
  * Variables obtained: Voltage and Current
  */
-void getVoltage(void *p){
+void getPower(void *p){
   static TickType_t xLastWakeTime = xTaskGetTickCount();
   const TickType_t xPeriod = 100;
 
@@ -143,11 +143,29 @@ void sendDataToRaspberryPi(void *p){
   
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){ 
-      int16_t _buffer[18];
-      serialize(_buffer);
-      for(int i=0; i <= 17; i++)
-        Serial.println(_buffer[i]);
-      xSemaphoreGive(semaphore);
+      int trys = 0;
+      // Loop once if not received
+      while (trys > 2){
+        int16_t _buffer[18];
+        serialize(_buffer);
+        for(int i=0; i <= 17; i++)
+          Serial.println(_buffer[i]);
+        
+        if (Serial.available()) {
+            reply = Serial.read();
+          if (reply == ACK) {
+            Serial.println(ACK);
+            trys = 3;
+            xSemaphoreGive(semaphore);
+          } else {
+            Serial.println("Fail to send");
+            trys++;
+          }
+        } else {
+          Serial.println("Fail to send");
+          trys++;
+        }
+      }
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod);
   }
@@ -161,7 +179,7 @@ void setup() {
   
   /* Task Creation */
   xTaskCreate(readDataFromSensors, "readDataFromSensors", STACK_SIZE, (void *) NULL, 3, NULL);
-  xTaskCreate(getVoltage, "getVoltage", STACK_SIZE, (void *) NULL, 2, NULL);
+  xTaskCreate(getPower, "getPower", STACK_SIZE, (void *) NULL, 2, NULL);
   xTaskCreate(sendDataToRaspberryPi, "sendDataToRaspberryPi", STACK_SIZE, (void *) NULL, 1, NULL);
   vTaskStartScheduler();
 }
