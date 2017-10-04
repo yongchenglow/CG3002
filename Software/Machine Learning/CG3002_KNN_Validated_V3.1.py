@@ -125,7 +125,7 @@ precision_rate = metrics.precision_score(y_test, y_predict, average='macro')
 f1_score = metrics.f1_score(y_test, y_predict, average= 'macro')
 
 print (time.time()-start)
-results = pd.DataFrame(cm, columns = ['SITTING', 'WALKING', 'JUMPING'])
+results = pd.DataFrame(matrix, columns = ['SITTING', 'WALKING', 'JUMPING'])
 
 results.rename(index ={0:'SITTING', 1:'WALKING', 2: 'JUMPING' }, inplace = True)
 accuracy = pd.DataFrame([accuracy_rate_1],columns = ['ACCURACY'])
