@@ -3,7 +3,7 @@ import time
 import csv
 
 # Set up th serial port
-ser = serial.Serial('/dev/ttyS0',9600)
+ser = serial.Serial('/dev/ttyS0',115200)
 
 # Declare the Packet Codes for the Packet Type
 ACK = b"\x00"
@@ -41,18 +41,18 @@ while True:
     dataList.append(int(ser.readline()))
     
     if (dataList[17] == checkSum):
+        ser.write(ACK)                  # Send ACK to arduino if everything is received
         print('Succesfull Transmission')
+        print(dataList)                 # For Debugging/Demo purposes
+        print(checkSum)                 # For Debugging/Demo purposes
         with open('data.csv','a') as file:
             writer = csv.writer(file)
-            data = [dataList[3], dataList[4], dataList[5],
-                    dataList[7], dataList[8], dataList[9],
-                    dataList[11], dataList[12], dataList[13]]
+            data = [dataList[2], dataList[3], dataList[4],
+                    dataList[6], dataList[7], dataList[8],
+                    dataList[10], dataList[11], dataList[12]]
             writer.writerow(data)
-        print(dataList)
-        print(checkSum)
-        ser.write(ACK)                  # Send ACK to arduino if everything is received
+        
     else:
+        print('Transmission Failed')
         ser.write(NACK)                 # Send NACK if an kind of error occurs
-        print('fail')
-        print(dataList)
-        print(checkSum)
+        

@@ -118,7 +118,7 @@ void readDataFromSensors(void *p){
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod);
   }
-}*/
+}
 
 /**
  * Task to read data from the power circuit
@@ -154,7 +154,7 @@ void getPower(void *p){
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod);
   }
-}*/
+}
 
 /**
  * Task to send Data to the RasberryPi
@@ -190,8 +190,6 @@ void sendDataToRaspberryPi(void *p){
         }
         trys++;
       }
-      for(int i=0; i <= 17; i++)
-        Serial1.println(int16_t(xPeriod));
       xSemaphoreGive(semaphore);
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod);
@@ -217,7 +215,7 @@ void setup() {
   initializeDataPacket();
   xSemaphoreGive(semaphore);
   
-  TaskCreate
+  // Create Tasks
   xTaskCreate(readDataFromSensors, "readDataFromSensors", STACK_SIZE, (void *) NULL, 3, NULL);
   xTaskCreate(getPower, "getPower", STACK_SIZE, (void *) NULL, 2, NULL);
   xTaskCreate(sendDataToRaspberryPi, "sendDataToRaspberryPi", STACK_SIZE, (void *) NULL, 1, NULL);
