@@ -6,18 +6,19 @@ from sklearn.svm import SVC
 from sklearn.preprocessing import label_binarize
 from sklearn.cross_validation import cross_val_score
 from sklearn.metrics import confusion_matrix
+from sklearn import utils
 import time
 
 start = time.time()
-df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/Filtering/filtered_activities.csv')
-#df = pd.DataFrame([df], columns = ['ACC1_X, ACC1_Y, ACC1_Z, ACC2_X, ACC2_Y, ACC2_Z, GYRO_X, GYRO_Y, GYRO_Z'])
+df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/filtered_dance.csv')
+'''df = pd.DataFrame([df], columns = ['ACC1_X, ACC1_Y, ACC1_Z, ACC2_X, ACC2_Y, ACC2_Z, GYRO_X, GYRO_Y, GYRO_Z'])
 df['LABELS2'] = None
 count = len(df['LABELS2'])
 print (count)
 for i in range(count):
-   print (df.head())
+   print (df.head())'''
 
-'''y = pd.DataFrame(df['LABELS'])
+y = pd.DataFrame(df['LABELS'])
 le = preprocessing.LabelEncoder()
 le.fit(df['LABELS'])
 label = list(le.classes_)
@@ -37,7 +38,7 @@ def segment_signal(df, window_size):
         segments[i] = np.vstack(segment)
     return segments
 
-segmented_df = segment_signal(X, 125)
+segmented_df = segment_signal(X, 50)
 
 print (time.time()-start)
 nLayers = segmented_df.shape[0]
@@ -86,8 +87,8 @@ feature_list = np.hstack((mean_list, std_list, median_list))
 
 ##### labels #####
 y_list = []
-y = y.reshape(180000, 1)
-y = segment_signal(y, 125)
+y = y.reshape(35250, 1)
+y = segment_signal(y, 50)
 
 nLayers = y.shape[0]
 nRows = y.shape[1]
@@ -103,11 +104,13 @@ for i in range(nLayers):
         row = np.append(row, [mean])
     y_list = np.append(y_list, row)
 
+y_list = np.floor(y_list)
 
-X_train, X_test, y_train, y_test = cross_validation.train_test_split(mean_list,
-                                                   y_list, test_size = 0.4)
 
-print (time.time()-start)
+X_train, X_test, y_train, y_test = cross_validation.train_test_split(feature_list,
+                                                   y_list, test_size = 0.25)
+
+
 clf = SVC()
 clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
@@ -119,21 +122,24 @@ validate_score = cross_val_score(clf, mean_list, y_list, cv= 10).mean()
 ##### Confusion Matrix #####
 matrix = metrics.confusion_matrix(y_test, y_predict)
 ##### Accuracy rate from Matrix #####
-accuracy_rate_2 = metrics.accuracy_score(y_test, y_predict)
+'''accuracy_rate_2 = metrics.accuracy_score(y_test, y_predict)
 ##### Probability of detection #####
 recall_rate = metrics.recall_score(y_test, y_predict, average= 'macro')
 ##### Proportion of positive result that is correct #####
 precision_rate = metrics.precision_score(y_test, y_predict, average='macro')
 ##### Harmonic mean of Precision & Recall #####
-f1_score = metrics.f1_score(y_test, y_predict, average= 'macro')
+f1_score = metrics.f1_score(y_test, y_predict, average= 'macro')'''
 
-print (time.time()-start)
-results = pd.DataFrame(matrix, columns = ['JUMPING', 'SITTING', 'WALKING'])
+#print (time.time()-start)
+results = pd.DataFrame(matrix, columns = ['busdriver', 'frontback', 'jumping', 'jumpingjack', 'sidestep', 'squatturnclap',\
+                                          'turnclap', 'wavehands', 'window', 'window360'])
+print (accuracy_rate_1)
 
-results.rename(index ={1:'SITTING', 2:'WALKING', 0: 'JUMPING' }, inplace = True)
+results.rename(index ={0: 'ACCURACY', 1:'busdriver', 2:'frontback', 3:'jumping', 4:'jumpingjack', 5:'sidestep', 6:'squatturnclap',\
+                       7:'turnclap', 8:'wavehands', 9:'window', 10:'window360' }, inplace = True)
 accuracy = pd.DataFrame([accuracy_rate_1],columns = ['ACCURACY'])
 accuracy.rename(index ={0:'ACCURACY'}, inplace = True)
 results = results.append(accuracy)
 results = results.fillna('')
 results.to_csv('Accuracy_Matrix_SVM.csv')
-print (time.time()-start)'''
+#print (time.time()-start)
