@@ -153,7 +153,7 @@ print(f1_score)
 
 results = pd.DataFrame(cm, columns = ['SITTING', 'WALKING', 'JUMPING'])
 
-results.rename(index ={0:'SITTING', 1:'WALKING', 2: 'JUMPING' }, inplace = True)
+results.rename(index ={1:'SITTING', 2:'WALKING', 0: 'JUMPING' }, inplace = True)
 accuracy = pd.DataFrame([accuracy_rate_1],columns = ['ACCURACY'])
 accuracy.rename(index ={0:'ACCURACY'}, inplace = True)
 results = results.append(accuracy)
