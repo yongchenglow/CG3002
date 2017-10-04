@@ -135,8 +135,8 @@ results = pd.DataFrame(matrix, columns = ['busdriver', 'frontback', 'jumping', '
                                           'turnclap', 'wavehands', 'window', 'window360'])
 print (accuracy_rate_1)
 
-results.rename(index ={0: 'ACCURACY', 1:'busdriver', 2:'frontback', 3:'jumping', 4:'jumpingjack', 5:'sidestep', 6:'squatturnclap',\
-                       7:'turnclap', 8:'wavehands', 9:'window', 10:'window360' }, inplace = True)
+results.rename(index ={0:'busdriver', 1:'frontback', 2:'jumping', 3:'jumpingjack', 4:'sidestep', 5:'squatturnclap',\
+                       6:'turnclap', 7:'wavehands', 8:'window', 9:'window360' }, inplace = True)
 accuracy = pd.DataFrame([accuracy_rate_1],columns = ['ACCURACY'])
 accuracy.rename(index ={0:'ACCURACY'}, inplace = True)
 results = results.append(accuracy)
