@@ -10,8 +10,14 @@ import time
 
 start = time.time()
 df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/Filtering/filtered_activities.csv')
+#df = pd.DataFrame([df], columns = ['ACC1_X, ACC1_Y, ACC1_Z, ACC2_X, ACC2_Y, ACC2_Z, GYRO_X, GYRO_Y, GYRO_Z'])
+df['LABELS2'] = None
+count = len(df['LABELS2'])
+print (count)
+for i in range(count):
+   print (df.head())
 
-y = pd.DataFrame(df['LABELS'])
+'''y = pd.DataFrame(df['LABELS'])
 le = preprocessing.LabelEncoder()
 le.fit(df['LABELS'])
 label = list(le.classes_)
@@ -130,4 +136,4 @@ accuracy.rename(index ={0:'ACCURACY'}, inplace = True)
 results = results.append(accuracy)
 results = results.fillna('')
 results.to_csv('Accuracy_Matrix_SVM.csv')
-print (time.time()-start)
+print (time.time()-start)'''
