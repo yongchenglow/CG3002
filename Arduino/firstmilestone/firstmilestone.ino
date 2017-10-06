@@ -66,10 +66,10 @@ void handshake() {
   int handshake_flag = 1;
   
   while (handshake_flag == 1) {
-    if (Serial1.available()) {
-      reply = Serial1.read();
+    if (Serial.available()) {
+      reply = Serial.read();
       if (reply == HELLO) {
-        Serial1.println(ACK);
+        Serial.println(ACK);
       }
       if (reply == ACK) {
         handshake_flag = 0;
@@ -78,8 +78,8 @@ void handshake() {
   }
 }
 
-// Functiont to Serial1lize the data packet
-void Serial1ize(int16_t *_buffer){
+// Functiont to Seriallize the data packet
+void Serialize(int16_t *_buffer){
   int16_t checksum = 0;
   memcpy(_buffer, &data, (size_t) sizeof(data));
   for(int i = 0; i <= 16; i++){
@@ -94,7 +94,7 @@ void Serial1ize(int16_t *_buffer){
  */
 void readDataFromSensors(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
-  const TickType_t xPeriod = 100;
+  const TickType_t xPeriod = 16;
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
       // Obtain Gyroscope Reading
@@ -116,7 +116,7 @@ void readDataFromSensors(void *p){
       accelgyro.getAcceleration(&data.accelThigh[0], &data.accelThigh[1], &data.accelThigh[2]);
       xSemaphoreGive(semaphore);
     }
-    vTaskDelayUntil(&xLastWakeTime, xPeriod);
+    vTaskDelayUntil(&xLastWakeTime, xPeriod/ portTICK_PERIOD_MS);
   }
 }
 
@@ -126,7 +126,7 @@ void readDataFromSensors(void *p){
  */
 void getPower(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
-  const TickType_t xPeriod = 100;
+  const TickType_t xPeriod = 16;
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){      
       // Read Raw values from the INA169 board and voltage divider
@@ -147,12 +147,12 @@ void getPower(void *p){
       data.current = (currentSensorValue / (10 * RS))*1000;
 
       // Power = Voltage * Current
-      data.power = data.voltage * data.current;
+      data.power = (voltageSensorValue * 2 * (currentSensorValue / (10 * RS)))*1000;
 
       // Give Semaphore
       xSemaphoreGive(semaphore);
     }
-    vTaskDelayUntil(&xLastWakeTime, xPeriod);
+    vTaskDelayUntil(&xLastWakeTime, xPeriod/ portTICK_PERIOD_MS);
   }
 }
 
@@ -164,7 +164,7 @@ void getPower(void *p){
  */
 void sendDataToRaspberryPi(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
-  const TickType_t xPeriod = 100;
+  const TickType_t xPeriod = 16;
   
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){ 
@@ -174,16 +174,16 @@ void sendDataToRaspberryPi(void *p){
       // Loop once if not received
       while (trys < 2){
         int16_t _buffer[18];
-        Serial1ize(_buffer);
+        Serialize(_buffer);
         for(int i=0; i <= 17; i++)
-          Serial1.println(_buffer[i]);
+          Serial.println(_buffer[i]);
 
-        if(!Serial1.available()){
-          vTaskDelay(1);
-        }
+        /*if(!Serial.available()){
+          vTaskDelay(10/ portTICK_PERIOD_MS);
+        }*/
         
-        if (Serial1.available()) {
-          reply = Serial1.read();
+        if (Serial.available()) {
+          reply = Serial.read();
           if (reply == ACK) {
             trys = 10;
           }
@@ -192,7 +192,7 @@ void sendDataToRaspberryPi(void *p){
       }
       xSemaphoreGive(semaphore);
     }
-    vTaskDelayUntil(&xLastWakeTime, xPeriod);
+    vTaskDelayUntil(&xLastWakeTime, xPeriod/ portTICK_PERIOD_MS);
   }
 }
 
@@ -208,7 +208,7 @@ void setup() {
   pinMode(accSec, OUTPUT);
   pinMode(accThird, OUTPUT);
   
-  Serial1.begin(115200);
+  Serial.begin(115200);
     
   handshake();
   accelgyro.initialize();
