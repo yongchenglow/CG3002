@@ -66,10 +66,10 @@ void handshake() {
   int handshake_flag = 1;
   
   while (handshake_flag == 1) {
-    if (Serial.available()) {
-      reply = Serial.read();
+    if (Serial1.available()) {
+      reply = Serial1.read();
       if (reply == HELLO) {
-        Serial.println(ACK);
+        Serial1.println(ACK);
       }
       if (reply == ACK) {
         handshake_flag = 0;
@@ -78,8 +78,8 @@ void handshake() {
   }
 }
 
-// Functiont to Seriallize the data packet
-void Serialize(int16_t *_buffer){
+// Functiont to Serial1lize the data packet
+void Serial1ize(int16_t *_buffer){
   int16_t checksum = 0;
   memcpy(_buffer, &data, (size_t) sizeof(data));
   for(int i = 0; i <= 16; i++){
@@ -174,16 +174,19 @@ void sendDataToRaspberryPi(void *p){
       // Loop once if not received
       while (trys < 2){
         int16_t _buffer[18];
-        Serialize(_buffer);
+        Serial1ize(_buffer);
         for(int i=0; i <= 17; i++)
-          Serial.println(_buffer[i]);
+          Serial1.println(_buffer[i]);
 
-        /*if(!Serial.available()){
-          vTaskDelay(10/ portTICK_PERIOD_MS);
+        /*if(!Serial1.available()){
+          vTaskDelay(5/ portTICK_PERIOD_MS);
         }*/
+        while(!Serial1.available()){
+          
+        }
         
-        if (Serial.available()) {
-          reply = Serial.read();
+        if (Serial1.available()) {
+          reply = Serial1.read();
           if (reply == ACK) {
             trys = 10;
           }
@@ -208,7 +211,7 @@ void setup() {
   pinMode(accSec, OUTPUT);
   pinMode(accThird, OUTPUT);
   
-  Serial.begin(115200);
+  Serial1.begin(115200);
     
   handshake();
   accelgyro.initialize();
