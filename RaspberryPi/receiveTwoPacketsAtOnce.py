@@ -18,8 +18,8 @@ handshake_flag = True
 while handshake_flag:
     time.sleep(1)                       # 1 second pause timing
     ser.write(HELLO)                    # Send Hello to Arduino
-    string = ser.readline()             # Read Arduino's response
-    reply = int(string)
+    string = ser.read()             # Read Arduino's response
+    reply = int.from_bytes(string, byteorder='big', signed=True)
     if (reply == 0):                    # Check if the reply is an ACK
         handshake_flag = False
         ser.write(ACK)                  # If true, change flag and ACK
@@ -32,16 +32,18 @@ while True:
     checkSum = 0
     dataList = []
     
-    numberOfData = int(ser.readline())
+    numberOfData = int.from_bytes(ser.read(), byteorder='big', signed=True)
     length = numberOfData*16+2
+    #print(numberOfData)
+    #print(length)
     # Read in the other values of the Data Packet
     for i in range(0, length):
-        item = int(ser.readline())      # Read in the data send by the Arduino
+        item = int.from_bytes(ser.read(), byteorder='big', signed=True)      # Read in the data send by the Arduino
         dataList.append(item)           # Store the data into a list
         checkSum = checkSum ^ item      # Calculate the checksum by taking XOR
     
     # Read in the Checksum
-    dataList.append(int(ser.readline()))
+    dataList.append(int.from_bytes(ser.read(), byteorder='big', signed=True))
     
     #print(dataList) 
     #print(checkSum) 
@@ -66,7 +68,7 @@ while True:
                         dataList[23], dataList[24], dataList[25],
                         dataList[27], dataList[28], dataList[29]]
                 writer.writerow(data)
-            #save(dataList[31], dataList[32], dataList[33])
+        #save(dataList[31], dataList[32], dataList[33])
         
     else:
         print('Transmission Failed')

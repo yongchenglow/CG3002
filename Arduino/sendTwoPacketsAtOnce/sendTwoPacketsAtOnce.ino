@@ -80,7 +80,7 @@ void handshake() {
     if (Serial1.available()) {
       reply = Serial1.read();
       if (reply == HELLO) {
-        Serial1.println(ACK);
+        Serial1.write(ACK);
       }
       if (reply == ACK) {
         handshake_flag = 0;
@@ -226,13 +226,8 @@ void sendDataToRaspberryPi(void *p){
         int16_t _buffer[36];
         Serial1ize(_buffer);
         for(int i=0; i < 36; i++){
-          Serial1.println(_buffer[i]);
+          Serial1.write(_buffer[i]);
         }
-          
-        
-        /*if(!Serial1.available()){
-          vTaskDelay(10/ portTICK_PERIOD_MS);
-        }*/
 
         while(!Serial1.available()){
           
