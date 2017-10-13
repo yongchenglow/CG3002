@@ -14,6 +14,7 @@
 
 #define STACK_SIZE    200
 
+// Fast AnalogRead
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 
@@ -30,12 +31,16 @@ typedef struct DataPacket{
   int16_t voltage;
   int16_t current;
   int16_t power;
+  int16_t cumilativePower;
 } DataPacket;
 
 // Packet Declaration
-DataPacket packet[2];
+const int bufferSize = 10;
+int16_t _buffer[bufferSize][20];
+int frontOfBuffer = 0;
+int backOfBuffer = 0;
+int bufferFullFlag = 0;
 DataPacket data;
-int numberOfPackets = 0;
 
 // Device ID
 int16_t ARM_ID = 0, GYRO_ID = 1, THIGH_ID = 2, POWER_ID = 3;
@@ -58,9 +63,6 @@ const GPIO_pin_t gyroFirst = DP30;
 const GPIO_pin_t accSec = DP29;
 const GPIO_pin_t accThird = DP31;
 const TickType_t xPeriod = 16;
-/*int gyroFirst = 30;
-int accSec = 29;
-int accThird = 31;*/
 
 // Function to initialise the data packet siwth some values
 void initializeDataPacket(){
@@ -90,28 +92,15 @@ void handshake() {
 }
 
 // Functiont to Serial1lize the data packet
-void Serial1ize(int16_t *_buffer){
+void Serial1ize(int16_t *packet){
   int16_t checksum = 0;
-  _buffer[0] = numberOfPackets;
-  memcpy(_buffer+1, &packet, (size_t) sizeof(packet));
-  for(int i = 1; i < 35; i++){
-    checksum ^= _buffer[i];
-  } 
-  _buffer[35] = checksum;
+  packet[0] = backOfBuffer;
+  memcpy(packet+1, &data, (size_t) sizeof(data));
+  for(int i = 1; i < 19; i++)
+    checksum ^= packet[i];
+    
+  packet[19] = checksum;
 }
-
-/*// Functiont to Serial1lize the data packet
-int Serial1ize(int16_t *_buffer){
-  int16_t checksum = 0;
-  _buffer[0] = numberOfPackets;
-  memcpy(_buffer+1, &packet, (size_t) sizeof(packet));
-  int bufferSize = sizeof(packet)+1;
-  for(int i = 1; i < bufferSize; i++){
-    checksum ^= _buffer[i];
-  } 
-  _buffer[bufferSize] = checksum;
-  return bufferSize;
-}*/
 
 /**
  * Function to read data from all sensors
@@ -119,22 +108,16 @@ int Serial1ize(int16_t *_buffer){
  */
 void readDataFromSensors(){
   // Obtain Gyroscope Reading
-  //digitalWrite(gyroFirst, LOW);
-  //digitalWrite(accThird, HIGH);
   digitalWrite2f(gyroFirst, LOW);
   digitalWrite2f(accThird, HIGH);
   accelgyro.getRotation(&data.gyroscope[0], &data.gyroscope[1], &data.gyroscope[2]);
   
   // Change to reading of hand accelerometer
-  //digitalWrite(gyroFirst, HIGH);
-  //digitalWrite(accSec, LOW);
   digitalWrite2f(gyroFirst, HIGH);
   digitalWrite2f(accSec, LOW);
   accelgyro.getAcceleration(&data.accelHand[0], &data.accelHand[1], &data.accelHand[2]);
   
   // Change to reading of Thigh accelerometer
-  //digitalWrite(accSec, HIGH);
-  //digitalWrite(accThird, LOW);
   digitalWrite2f(accSec, HIGH);
   digitalWrite2f(accThird, LOW);
   accelgyro.getAcceleration(&data.accelThigh[0], &data.accelThigh[1], &data.accelThigh[2]);  
@@ -164,6 +147,28 @@ void readDataFromPowerCircuit(){
   
   // Power = Voltage * Current
   data.power = (voltageSensorValue * 2 * (currentSensorValue / (10 * RS)))*1000;
+
+  data.cumilativePower = rand()-rand();
+}
+
+/**
+ * Function to read and Package the data
+ */
+void readAndPackageData(){
+  // Read the data if the buffer is not full
+  if(bufferFullFlag == 0){
+    readDataFromSensors();
+    readDataFromPowerCircuit();
+    Serial1ize(_buffer[backOfBuffer]);
+    backOfBuffer = (backOfBuffer + 1)%bufferSize;
+  }
+
+  // Warns the system if the buffer is full
+  if((backOfBuffer + 1)%bufferSize == frontOfBuffer){
+    bufferFullFlag = 1;
+  } else {
+    bufferFullFlag = 0;
+  }
 }
 
 /**
@@ -174,12 +179,7 @@ void readDataAtFullCycle(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
-      readDataFromSensors();
-      readDataFromPowerCircuit();
-      packet[numberOfPackets] = data;
-      numberOfPackets++;
-
-      // Give Semaphore
+      readAndPackageData();
       xSemaphoreGive(semaphore);
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod/ portTICK_PERIOD_MS);
@@ -195,12 +195,7 @@ void readDataAtHalfCycle(void *p){
   vTaskDelayUntil(&xLastWakeTime, (xPeriod/2)/ portTICK_PERIOD_MS);
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){      
-      readDataFromSensors();
-      readDataFromPowerCircuit();
-      packet[numberOfPackets] = data;
-      numberOfPackets++;
-
-      // Give Semaphore
+      readAndPackageData();
       xSemaphoreGive(semaphore);
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod/ portTICK_PERIOD_MS);
@@ -215,33 +210,47 @@ void readDataAtHalfCycle(void *p){
  */
 void sendDataToRaspberryPi(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
- 
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){ 
       int trys = 0;
       int reply;
+      int numberOfPacketsInBuffer;
 
-      // Loop once if not received
-      while (trys < 2){
-        int16_t _buffer[36];
-        Serial1ize(_buffer);
-        for(int i=0; i < 36; i++){
-          Serial1.write(_buffer[i]);
-        }
+      if(frontOfBuffer < backOfBuffer){
+        numberOfPacketsInBuffer = backOfBuffer - frontOfBuffer;
+      } else {
+        numberOfPacketsInBuffer = backOfBuffer + bufferSize - frontOfBuffer;
+      }
 
-        while(!Serial1.available()){
-          
+      for(int i = 0; i < numberOfPacketsInBuffer; i++){
+        for(int j = 0; j < 20; j++){
+            Serial1.write(_buffer[(frontOfBuffer+i)%bufferSize][j]);
         }
+      }
+
+      //frontOfBuffer = backOfBuffer;
+
+      while(!Serial1.available()){
         
-        if (Serial1.available()) {
+      }
+      
+      if (Serial1.available()) {
           reply = Serial1.read();
           if (reply == ACK) {
-            trys = 10;
+            frontOfBuffer = (frontOfBuffer+1)%10;
           }
-        }
-        trys++;
       }
-      numberOfPackets = 0;
+
+      while(!Serial1.available()){
+        
+      }
+      
+      if (Serial1.available()) {
+          reply = Serial1.read();
+          if (reply == ACK) {
+            frontOfBuffer = (frontOfBuffer+1)%10;
+          }
+      }
       xSemaphoreGive(semaphore);
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod/ portTICK_PERIOD_MS);
@@ -261,14 +270,6 @@ void setup() {
   sbi(ADCSRA, ADPS2);
   cbi(ADCSRA, ADPS1);
   cbi(ADCSRA, ADPS0);
-  
-  //pinMode(gyroFirst, OUTPUT);
-  //pinMode(accSec, OUTPUT);
-  //pinMode(accThird, OUTPUT);
-
-  //digitalWrite(gyroFirst, HIGH);
-  //digitalWrite(accSec, HIGH);
-  //digitalWrite(accThird, HIGH);
 
   pinMode2f(gyroFirst, OUTPUT);
   pinMode2f(accSec, OUTPUT);
@@ -292,13 +293,11 @@ void setup() {
   vTaskStartScheduler();
 }
 
+/**
+ * Loop method to reduce power
+ */
 void loop() {
   // Digital Input Disable on Analogue Pins
-  // When this bit is written logic one, the digital input buffer on the corresponding ADC pin is disabled.
-  // The corresponding PIN Register bit will always read as zero when this bit is set. When an
-  // analogue signal is applied to the ADC7..0 pin and the digital input from this pin is not needed, this
-  // bit should be written logic one to reduce power consumption in the digital input buffer.
-   
   #if defined(__AVR_ATmega640__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__) // Mega with 2560
   DIDR0 = 0xFF;
   DIDR2 = 0xFF;
@@ -314,36 +313,18 @@ void loop() {
   #endif
    
   // Analogue Comparator Disable
-  // When the ACD bit is written logic one, the power to the Analogue Comparator is switched off.
-  // This bit can be set at any time to turn off the Analogue Comparator.
-  // This will reduce power consumption in Active and Idle mode.
-  // When changing the ACD bit, the Analogue Comparator Interrupt must be disabled by clearing the ACIE bit in ACSR.
-  // Otherwise an interrupt can occur when the ACD bit is changed.
   ACSR &= ~_BV(ACIE);
   ACSR |= _BV(ACD);
    
-  // There are several macros provided in the header file to actually put
-  // the device into sleep mode.
-  // SLEEP_MODE_IDLE (0)
-  // SLEEP_MODE_ADC (_BV(SM0))
-  // SLEEP_MODE_PWR_DOWN (_BV(SM1))
-  // SLEEP_MODE_PWR_SAVE (_BV(SM0) | _BV(SM1))
-  // SLEEP_MODE_STANDBY (_BV(SM1) | _BV(SM2))
-  // SLEEP_MODE_EXT_STANDBY (_BV(SM0) | _BV(SM1) | _BV(SM2))
-   
   set_sleep_mode( SLEEP_MODE_IDLE );
-   
   portENTER_CRITICAL();
   sleep_enable();
-   
-  // Only if there is support to disable the brown-out detection.
+  
   #if defined(BODS) && defined(BODSE)
   sleep_bod_disable();
   #endif
    
   portEXIT_CRITICAL();
-  sleep_cpu(); // good night.
-   
-  // Ugh. I've been woken up. Better disable sleep mode.
-  sleep_reset(); // sleep_reset is faster than sleep_disable() because it clears all sleep_mode() bits.
+  sleep_cpu();
+  sleep_reset();
 }

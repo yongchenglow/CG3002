@@ -18,7 +18,7 @@ handshake_flag = True
 while handshake_flag:
     time.sleep(1)                       # 1 second pause timing
     ser.write(HELLO)                    # Send Hello to Arduino
-    string = ser.read()             # Read Arduino's response
+    string = ser.read()                 # Read Arduino's response
     reply = int.from_bytes(string, byteorder='big', signed=True)
     if (reply == 0):                    # Check if the reply is an ACK
         handshake_flag = False
@@ -31,15 +31,14 @@ while True:
     # Variables
     checkSum = 0
     dataList = []
+    length = 18
     
-    numberOfData = int.from_bytes(ser.read(), byteorder='big', signed=True)
-    length = numberOfData*16+2
-    #print(numberOfData)
-    #print(length)
+    number = ser.read()
+    packetNumber = int.from_bytes(number, byteorder='big', signed=True)
     # Read in the other values of the Data Packet
     for i in range(0, length):
         item = int.from_bytes(ser.read(), byteorder='big', signed=True)      # Read in the data send by the Arduino
-        dataList.append(item)           # Store the data into a list
+        dataList.append(item)          # Store the data into a list
         checkSum = checkSum ^ item      # Calculate the checksum by taking XOR
     
     # Read in the Checksum
@@ -59,16 +58,6 @@ while True:
                     dataList[6], dataList[7], dataList[8],
                     dataList[10], dataList[11], dataList[12]]
             writer.writerow(data)
-        #save(dataList[14], dataList[15], dataList[16])
-        
-        if(numberOfData > 1):
-            with open('data.csv','a') as file:
-                writer = csv.writer(file)
-                data = [dataList[19], dataList[20], dataList[21],
-                        dataList[23], dataList[24], dataList[25],
-                        dataList[27], dataList[28], dataList[29]]
-                writer.writerow(data)
-        #save(dataList[31], dataList[32], dataList[33])
         
     else:
         print('Transmission Failed')
