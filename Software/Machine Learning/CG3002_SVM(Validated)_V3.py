@@ -80,10 +80,9 @@ for i in range(nLayers):
     median_list = np.append(median_list, row)
 median_list = median_list.reshape((nLayers, nColumns))
 
-#####Feature List#####
-feature_list = np.hstack((mean_list, std_list, median_list))
-    
 
+#####Feature List#####
+feature_list = np.hstack((mean_list, std_list, median_list))    
 
 ##### labels #####
 y_list = []
@@ -109,8 +108,6 @@ y_list = np.floor(y_list)
 
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(feature_list,
                                                    y_list, test_size = 0.25)
-
-
 clf = SVC()
 clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
@@ -121,20 +118,11 @@ y_predict = clf.predict(X_test)
 validate_score = cross_val_score(clf, mean_list, y_list, cv= 10).mean()
 ##### Confusion Matrix #####
 matrix = metrics.confusion_matrix(y_test, y_predict)
-##### Accuracy rate from Matrix #####
-'''accuracy_rate_2 = metrics.accuracy_score(y_test, y_predict)
-##### Probability of detection #####
-recall_rate = metrics.recall_score(y_test, y_predict, average= 'macro')
-##### Proportion of positive result that is correct #####
-precision_rate = metrics.precision_score(y_test, y_predict, average='macro')
-##### Harmonic mean of Precision & Recall #####
-f1_score = metrics.f1_score(y_test, y_predict, average= 'macro')'''
 
-#print (time.time()-start)
+
 results = pd.DataFrame(matrix, columns = ['busdriver', 'frontback', 'jumping', 'jumpingjack', 'sidestep', 'squatturnclap',\
                                           'turnclap', 'wavehands', 'window', 'window360'])
-print (accuracy_rate_1)
-
+    
 results.rename(index ={0:'busdriver', 1:'frontback', 2:'jumping', 3:'jumpingjack', 4:'sidestep', 5:'squatturnclap',\
                        6:'turnclap', 7:'wavehands', 8:'window', 9:'window360' }, inplace = True)
 accuracy = pd.DataFrame([accuracy_rate_1],columns = ['ACCURACY'])
