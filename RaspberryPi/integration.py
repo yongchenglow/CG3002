@@ -29,13 +29,13 @@ power = 0
 def handshake(handshake_flag):
     print('Checking handshake')
     while handshake_flag:
-        time.sleep(1)                       # 1s pause timing
-        ser.write(HELLO)                    # Send Hello to Arduino
-        str = ser.readline()                # Read Arduino's response
-        reply = int(str)
-        if (reply == 0):                    # Check if reply is an ACK
+        time.sleep(1)
+        ser.write(HELLO)
+        string = ser.read()
+        reply = int.from_bytes(string, byteorder='big', signed=True)
+        if (reply == 0):
             handshake_flag = False
-            ser.write(ACK)                  # If true, change flag and ACK
+            ser.write(ACK)
             print('Handshake completed')
 
 def connectServer(ip, port):
@@ -49,17 +49,21 @@ def dataFromArduino():
     while True:
         checkSum = 0
         dataList = []
+        length = 18
     
+        number = ser.read()
+        packetNumber = int.from_bytes(number, byteorder='big', signed=True)
         # Read in the other values of the Data Packet
-        for i in range(0, 17):
-            item = int(ser.readline())       # Read data from Arduino
-            dataList.append(item)            # Store data into a list
-            checkSum = checkSum ^ item       # Calculate checksum (XOR)
+        for i in range(0, length):
+            item = int.from_bytes(ser.read(), byteorder='big', signed=True)      # Read in the data send by the Arduino
+            dataList.append(item)       # Store the data into a list
+            checkSum = checkSum ^ item  # Calculate the checksum by taking XOR
     
-        dataList.append(int(ser.readline())) # Read checksum
+        # Read in the Checksum
+        dataList.append(int.from_bytes(ser.read(), byteorder='big', signed=True))
         
-        if (dataList[17] == checkSum):
-            ser.write(ACK)                   # Send ACK to arduino if everything is received
+        if (dataList[length] == checkSum):
+            ser.write(ACK)                  # Send ACK to arduino if everything is received
             print('Successful Transmission')
             with open('data.csv','a') as file:
                 writer = csv.writer(file)
