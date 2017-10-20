@@ -1,4 +1,12 @@
+import sys
+import time
+import csv
+import socket
+import base64
+from Crypto.Cipher import AES
+from Crypto import Random
 
+from scipy import signal
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing, cross_validation, metrics
@@ -6,18 +14,25 @@ from sklearn.svm import SVC
 from sklearn.preprocessing import label_binarize
 from sklearn.cross_validation import cross_val_score
 from sklearn.metrics import confusion_matrix
-from sklearn import utils
+from numpy import array, zeros, argmin, inf
+from numpy.linalg import norm
 import time
 
-start = time.time()
-df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/filtered_dance.csv')
-'''df = pd.DataFrame([df], columns = ['ACC1_X, ACC1_Y, ACC1_Z, ACC2_X, ACC2_Y, ACC2_Z, GYRO_X, GYRO_Y, GYRO_Z'])
-df['LABELS2'] = None
-count = len(df['LABELS2'])
-print (count)
-for i in range(count):
-   print (df.head())'''
 
+from multiprocessing import Process
+
+rawData = []
+arduinoFlag = True
+start = time.time()
+##### buffer #####
+bufFlag = 0
+if(time.time()-start == 20.0):
+    bufFlag = 1
+    start = time.time()     
+if(bufFlag == 1):               #begin preprocessing to predictive analysis
+    X = pd.DataFrame(rawData)
+
+##### label encoder #####
 y = pd.DataFrame(df['LABELS'])
 le = preprocessing.LabelEncoder()
 le.fit(df['LABELS'])
