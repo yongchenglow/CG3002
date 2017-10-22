@@ -25,7 +25,7 @@ from numpy import array, zeros, argmin, inf
 from numpy.linalg import norm
 import time
 
-from ML_FUNCTIONS import time_features, segment_signal
+import ML_FUNCTIONS as ml
 
 from multiprocessing import Process
 
@@ -43,18 +43,20 @@ while (arduinoFlag == True):
         bufFlag = 0
         
     if(bufFlag == 1):               #begin preprocessing to predictive analysis
+        X = np.array(rawData)
+        
         X = pd.DataFrame(rawData)
         
         X = preprocessing.normalize(X) #normalize the dataset
         
-        X = segment_signal(X, 50)
+        X = ml.segment_signal(X, 50) #segmentation to 3d for feature extraction
         
         time_feature_list = []
         
-        time_feature_list = time_features(X, time_feature_list)
+        time_feature_list = ml.time_features(X, time_feature_list) #feature extraction and conver to 2d
         
         
-        X_train, X_test, y_train, y_test = cross_validation.train_test_split(feature_list,
+      ''' X_train, X_test, y_train, y_test = cross_validation.train_test_split(feature_list,
                                                            y_list, test_size = 0.25)
         clf = SVC()
         clf.fit(X_train, y_train)
@@ -65,7 +67,7 @@ while (arduinoFlag == True):
         ##### Average score achieved in validation K=10 #####
         validate_score = cross_val_score(clf, mean_list, y_list, cv= 10).mean()
         ##### Confusion Matrix #####
-        matrix = metrics.confusion_matrix(y_test, y_predict)
+        matrix = metrics.confusion_matrix(y_test, y_predict)'''
         
         
         results = pd.DataFrame(matrix, columns = ['busdriver', 'frontback', 'jumping', 'jumpingjack', 'sidestep', 'squatturnclap',\
