@@ -6,6 +6,8 @@ Created on Sat Oct 21 20:46:27 2017
 """
 import pandas as pd 
 import numpy as np   
+import matplotlib.pyplot as plt
+from scipy.signal import butter, filtfilt
 
 def segment_signal(df, window_size):
             N = df.shape[0]
@@ -50,3 +52,15 @@ def time_features(segmented_df, feature_list):
     feature_list = np.hstack((mean_list, std_list, median_list))  
     
     return feature_list
+
+
+def butter_lowpass(lowcut, highcut, order):
+    nyq = 0.5 * highcut
+    normal_cutoff = lowcut / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return b, a
+
+def butter_lowpass_filtfilt(data, lowcut, highcut, order):
+    b, a = butter_lowpass(lowcut, highcut, order=order)
+    y = filtfilt(b, a, data)
+    return y
