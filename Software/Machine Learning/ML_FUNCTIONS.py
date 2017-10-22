@@ -54,13 +54,13 @@ def time_features(segmented_df, feature_list):
     return feature_list
 
 
-def butter_lowpass(lowcut, highcut, order):
-    nyq = 0.5 * highcut
-    normal_cutoff = lowcut / nyq
+def butter_lowpass(cutoff, fs, order):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
     b, a = butter(order, normal_cutoff, btype='low', analog=False)
     return b, a
 
-def butter_lowpass_filtfilt(data, lowcut, highcut, order):
-    b, a = butter_lowpass(lowcut, highcut, order=order)
+def butter_lowpass_filtfilt(data, cutoff, fs, order):
+    b, a = butter_lowpass(cutoff, fs, order=order)
     y = filtfilt(b, a, data)
     return y
