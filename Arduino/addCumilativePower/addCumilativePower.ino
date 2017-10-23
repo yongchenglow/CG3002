@@ -224,7 +224,12 @@ void sendDataToRaspberryPi(void *p){
 
       for(int i = 0; i < numberOfPacketsInBuffer; i++){
         for(int j = 0; j < 20; j++){
-            Serial1.write(_buffer[(frontOfBuffer+i)%bufferSize][j]);
+            byte buf[2];
+            buf[0] = _buffer[(frontOfBuffer+i)%bufferSize][j] & 255;
+            buf[1] = (_buffer[(frontOfBuffer+i)%bufferSize][j] >> 8) & 255;
+            Serial1.write(buf, sizeof(buf));
+            Serial.println(_buffer[(frontOfBuffer+i)%bufferSize][j]);
+            
         }
       }
 
@@ -280,6 +285,7 @@ void setup() {
   digitalWrite2f(accThird, HIGH);
   
   Serial1.begin(115200);
+  Serial.begin(115200);
     
   handshake();
   accelgyro.initialize();

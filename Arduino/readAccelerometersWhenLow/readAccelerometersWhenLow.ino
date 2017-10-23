@@ -98,7 +98,7 @@ void setup() {
     accelgyro.initialize();
     accelgyro.setFullScaleGyroRange(MPU6050_ACCEL_FS_4);
     accelgyro.setFullScaleAccelRange(MPU6050_GYRO_FS_500);
-    accelgyro.setDLPFMode(3);
+    //accelgyro.setDLPFMode(3);
 
     // verify connection
     Serial.println("Testing device connections...");
