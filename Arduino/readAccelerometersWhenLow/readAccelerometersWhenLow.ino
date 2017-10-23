@@ -91,11 +91,14 @@ void setup() {
     // initialize serial communication
     // (38400 chosen because it works as well at 8MHz as it does at 16MHz, but
     // it's really up to you depending on your project)
-    Serial.begin(38400);
+    Serial.begin(115200);
 
     // initialize device
     Serial.println("Initializing I2C devices...");
     accelgyro.initialize();
+    accelgyro.setFullScaleGyroRange(MPU6050_ACCEL_FS_4);
+    accelgyro.setFullScaleAccelRange(MPU6050_GYRO_FS_500);
+    accelgyro.setDLPFMode(3);
 
     // verify connection
     Serial.println("Testing device connections...");
@@ -275,6 +278,8 @@ void loop() {
   Serial.print(" W");
   
   Serial.println();
+
+  Serial.println(accelgyro.getDLPFMode());
 
   // Delay program for a few milliseconds
   delay(500);

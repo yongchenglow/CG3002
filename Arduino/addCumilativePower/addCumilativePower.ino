@@ -283,6 +283,35 @@ void setup() {
     
   handshake();
   accelgyro.initialize();
+  accelgyro.setFullScaleGyroRange(MPU6050_ACCEL_FS_4);
+  accelgyro.setFullScaleAccelRange(MPU6050_GYRO_FS_500);
+  accelgyro.setDLPFMode(3);
+  /*
+   * MPU6050_ACCEL_FS_2          0x00
+   * MPU6050_ACCEL_FS_4          0x01
+   * MPU6050_ACCEL_FS_8          0x02
+   * MPU6050_ACCEL_FS_16         0x03
+   * accelgyro.setFullScaleGyroRange(uint8_t range)
+   * 
+   * MPU6050_GYRO_FS_250         0x00
+   * MPU6050_GYRO_FS_500         0x01
+   * MPU6050_GYRO_FS_1000        0x02
+   * MPU6050_GYRO_FS_2000        0x03
+   * accelgyro.setFullScaleAccelRange(uint8_t range)
+   * 
+   *          |   ACCELEROMETER    |           GYROSCOPE
+   * DLPF_CFG | Bandwidth | Delay  | Bandwidth | Delay  | Sample Rate
+   * ---------+-----------+--------+-----------+--------+-------------
+   * 0        | 260Hz     | 0ms    | 256Hz     | 0.98ms | 8kHz
+   * 1        | 184Hz     | 2.0ms  | 188Hz     | 1.9ms  | 1kHz
+   * 2        | 94Hz      | 3.0ms  | 98Hz      | 2.8ms  | 1kHz
+   * 3        | 44Hz      | 4.9ms  | 42Hz      | 4.8ms  | 1kHz
+   * 4        | 21Hz      | 8.5ms  | 20Hz      | 8.3ms  | 1kHz
+   * 5        | 10Hz      | 13.8ms | 10Hz      | 13.4ms | 1kHz
+   * 6        | 5Hz       | 19.0ms | 5Hz       | 18.6ms | 1kHz
+   * 7        |   -- Reserved --   |   -- Reserved --   | Reserved
+   * accelgyro.setDLPFMode(uint8_t mode)
+   */
   initializeDataPacket();
   xSemaphoreGive(semaphore);
   
