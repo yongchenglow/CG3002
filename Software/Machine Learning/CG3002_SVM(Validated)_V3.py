@@ -11,11 +11,9 @@ import pandas as pd
 import numpy as np
 from sklearn import preprocessing, cross_validation, metrics
 from sklearn.svm import SVC
-from sklearn.preprocessing import label_binarize
 from sklearn.cross_validation import cross_val_score
 from sklearn.metrics import confusion_matrix
-from numpy import array, zeros, argmin, inf
-from numpy.linalg import norm
+from sklearn.externals import joblib
 import time
 
 from ML_FUNCTIONS import time_features, segment_signal
@@ -23,27 +21,30 @@ from ML_FUNCTIONS import time_features, segment_signal
 from multiprocessing import Process
 
 start = time.time()
-##### label encoder #####
 df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/filtered_dance.csv') 
+
+##### label encoder #####
 y = pd.DataFrame(df['LABELS'])
 le = preprocessing.LabelEncoder()
 le.fit(df['LABELS'])
 label = list(le.classes_)
 df['LABELS'] = le.transform(df['LABELS'])
 y = np.array(df['LABELS'])
-print (time.time()-start)
 X = np.array(df.drop(['LABELS'], 1)) #removing labels
+
+##### normalize #####
 X = preprocessing.normalize(X) #normalize the dataset
 
+##### segmentation #####
 segmented_df = segment_signal(X, 50)
 
-
+##### time feature #####
 time_feature_list = []       
 time_feature_list = time_features(segmented_df, time_feature_list)
 
 ##### labels #####
 y_list = []
-y = y.reshape(35250, 1)
+y = y.reshape(df.shape[0], 1)
 y = segment_signal(y, 50)
 
 nLayers = y.shape[0]
@@ -62,17 +63,25 @@ for i in range(nLayers):
 
 y_list = np.floor(y_list)
 
-
+##### Training and Validation #####
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(time_feature_list,
                                                    y_list, test_size = 0.25)
 clf = SVC()
 clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
 
+##### Save model #####
+'''filename = 'trained_model.sav'
+joblib.dump(clf, filename)'''
+print(X_test.shape)
+
 ##### Applying model to test set #####
 y_predict = clf.predict(X_test)
+print(y_predict)
+
 ##### Average score achieved in validation K=10 #####
 validate_score = cross_val_score(clf, time_feature_list, y_list, cv= 10).mean()
+
 ##### Confusion Matrix #####
 matrix = metrics.confusion_matrix(y_test, y_predict)
 
