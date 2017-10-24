@@ -9,7 +9,7 @@ from Crypto import Random
 from scipy import signal
 import pandas as pd
 import numpy as np
-from sklearn import preprocessing, cross_validation, metrics
+from sklearn import preprocessing, cross_validation, metrics, neighbors
 from sklearn.svm import SVC
 from sklearn.cross_validation import cross_val_score
 from sklearn.metrics import confusion_matrix
@@ -21,7 +21,7 @@ from ML_FUNCTIONS import time_features, segment_signal
 from multiprocessing import Process
 
 start = time.time()
-df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/filtered_dance.csv') 
+df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/filtered_23OCT2017.csv') 
 
 ##### label encoder #####
 y = pd.DataFrame(df['LABELS'])
@@ -65,15 +65,15 @@ y_list = np.floor(y_list)
 
 ##### Training and Validation #####
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(time_feature_list,
-                                                   y_list, test_size = 0.25)
-clf = SVC()
+                                                   y_list, test_size = 0.3)
+clf = neighbors.KNeighborsClassifier(n_neighbors = 10)
 clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
 
 ##### Save model #####
-'''filename = 'trained_model.sav'
-joblib.dump(clf, filename)'''
-print(X_test.shape)
+filename = 'trained_model.sav'
+joblib.dump(clf, filename)
+
 
 ##### Applying model to test set #####
 y_predict = clf.predict(X_test)
