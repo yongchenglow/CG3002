@@ -48,7 +48,8 @@ while (arduinoFlag == True):
     if(bufFlag == 1):               #begin preprocessing to predictive analysis
         X = np.array(rawData)
         
-        X = pd.DataFrame(rawData)
+        X = pd.DataFrame(rawData, columns= [" ", "ACC1_X", "ACC1_Y", "ACC1_Z", "GYRO_X", "GYRO_Y",
+                                            "GYRO_Z", "ACC2_X", "ACC2_Y", "ACC2_Z"])
         
         X = preprocessing.normalize(X) #normalize the dataset
         
