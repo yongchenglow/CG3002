@@ -26,15 +26,15 @@ import ML_FUNCTIONS as ml
 
 from multiprocessing import Process
 
-rawData = []
+'''rawData = []
 final_result = None
 arduinoFlag = True
-start = time.time()
+start = time.time()'''
 
 ##### load model #####
 clf = joblib.load('trained_model.pkl') 
 
-##### Software system start ##### 
+'''##### Software system start ##### 
 while (arduinoFlag == True):
     
     ##### buffer #####
@@ -44,14 +44,18 @@ while (arduinoFlag == True):
         start = time.time()     
     else:
         bufFlag = 0
-        
-    if(bufFlag == 1):               #begin preprocessing to predictive analysis
+    '''
+bufFlag = 1
+if(bufFlag == 1):           #begin preprocessing to predictive analysis
+        rawData = pd.read_csv("file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/data231017/busdriver/busdriver1.csv")
         X = np.array(rawData)
         
-        X = pd.DataFrame(rawData, columns= [" ", "ACC1_X", "ACC1_Y", "ACC1_Z", "GYRO_X", "GYRO_Y",
-                                            "GYRO_Z", "ACC2_X", "ACC2_Y", "ACC2_Z"])
+        
+        
+        
         
         X = preprocessing.normalize(X) #normalize the dataset
+        
         
         X = ml.segment_signal(X, 50) #segmentation to 3d for feature extraction
         
@@ -61,13 +65,18 @@ while (arduinoFlag == True):
         
        
         ##### Predict #####
-        result = clf.predict(X)   
+#        print (clf)
+        result = clf.predict(time_feature_list)
         result = stats.mode(result) #find the mode in result
+        result = np.array(result[0])
+        result = str(int(result))
+        
+        
         result = ml.result_output(result) #output the result as string
-        bufFlag = 0  #reset flag to take in next dataset
+        bufFlag = 0  #reset flag to take in next dataset'''
         
         
-def dataFromArduino():
+'''def dataFromArduino():
     global rawData
     count = 0
     flag = True
@@ -89,4 +98,4 @@ def dataFromArduino():
             print('stop running dataFromArduino')
 
 Process(target=dataFromArduino, args=()).start()
-Process(target=learn, args=()).start()
+Process(target=learn, args=()).start()'''
