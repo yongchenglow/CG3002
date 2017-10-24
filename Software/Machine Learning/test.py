@@ -36,13 +36,16 @@ def learn(queue, action):
         rawData.append(queue.get())
         count += 1
     learnflag = True
+    
+    #print(rawData)
 
     while (learnflag):
         ##### buffer #####
         bufFlag = 1
         if(bufFlag == 1):               #begin preprocessing to predictive analysis
-            X = np.array(rawData)
-            X = pd.DataFrame(rawData)
+            #X = np.array(rawData)
+            X = np.array(rawData, dtype=int, copy=True)
+            
             X = preprocessing.normalize(X) #normalize the dataset
             X = ml.segment_signal(X, 50) #segmentation to 3d for feature extraction
             
@@ -50,15 +53,16 @@ def learn(queue, action):
             time_feature_list = ml.time_features(X, time_feature_list) #feature extraction and conver to 2d
 
             ##### Predict #####
-            result = clf.predict(X)   
+            result = clf.predict(time_feature_list)   
             result = stats.mode(result) #find the mode in result
             result = np.array(result[0])
             result = str(int(result))
         
         
             result = ml.result_output(result) #output the result as string
-            bufFlag = 0  #reset flag to take in next dataset
+            bufFlag = 0  #reset flag to take in next dataset'''
             action.value = result
+            print(result)
         learnflag = False
     print('Stopping learn')
 
@@ -66,8 +70,8 @@ def dataFromArduino(queue):
     print('Running dataFromArduino')
     count = 0
     
-    while (count < 4000):
-        queue.put([count, count])
+    while (count < 3000):
+        queue.put([count, count, count, count, count, count, count, count, count])
         count += 1
         
     print('Stopping dataFromArduino')
