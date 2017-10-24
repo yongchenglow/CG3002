@@ -228,12 +228,8 @@ void sendDataToRaspberryPi(void *p){
             buf[0] = _buffer[(frontOfBuffer+i)%bufferSize][j] & 255;
             buf[1] = (_buffer[(frontOfBuffer+i)%bufferSize][j] >> 8) & 255;
             Serial1.write(buf, sizeof(buf));
-            Serial.println(_buffer[(frontOfBuffer+i)%bufferSize][j]);
-            
         }
       }
-
-      //frontOfBuffer = backOfBuffer;
 
       while(!Serial1.available()){
         
@@ -266,7 +262,6 @@ void setup() {
   // join I2C bus (I2Cdev library doesn't do this automatically)
   #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
       Wire.begin();
-      Wire.setClock(400000L);
   #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
       Fastwire::setup(400, true);
   #endif
@@ -285,7 +280,6 @@ void setup() {
   digitalWrite2f(accThird, HIGH);
   
   Serial1.begin(115200);
-  Serial.begin(115200);
     
   handshake();
   accelgyro.initialize();
