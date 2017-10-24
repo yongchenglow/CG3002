@@ -32,7 +32,7 @@ arduinoFlag = True
 start = time.time()
 
 ##### load model #####
-clf = joblib.load('trained_model.sav') 
+clf = joblib.load('trained_model.pkl') 
 
 ##### Software system start ##### 
 while (arduinoFlag == True):
@@ -64,6 +64,7 @@ while (arduinoFlag == True):
         result = stats.mode(result) #find the mode in result
         result = ml.result_output(result) #output the result as string
         bufFlag = 0  #reset flag to take in next dataset
+        
         
 def dataFromArduino():
     global rawData
