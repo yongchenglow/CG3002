@@ -1,6 +1,7 @@
 import sys
 
-from multiprocessing import Process, Queue, Value, Lock
+from multiprocessing import Process, Queue, Value, Manager
+from ctypes import c_char_p
 import time
 import pandas as pd
 import numpy as np
@@ -20,7 +21,7 @@ def handshake(handshake_flag):
         handshake_flag = False
     print('Handshake completed')
 
-def learn(queue):
+def learn(queue, action):
     print('Running learn')
     clf = joblib.load('trained_model.pkl') # load model
     start = time.time()
@@ -35,17 +36,14 @@ def learn(queue):
         rawData.append(queue.get())
         count += 1
     learnflag = True
-    
-    print(rawData)
 
     while (learnflag):
-        print('tryingngg')
         ##### buffer #####
         bufFlag = 1
         if(bufFlag == 1):               #begin preprocessing to predictive analysis
             X = np.array(rawData)
             X = pd.DataFrame(rawData)
-            #X = preprocessing.normalize(X) #normalize the dataset
+            X = preprocessing.normalize(X) #normalize the dataset
             X = ml.segment_signal(X, 50) #segmentation to 3d for feature extraction
             
             time_feature_list = []
@@ -56,7 +54,7 @@ def learn(queue):
             result = stats.mode(result) #find the mode in result
             result = ml.result_output(result) #output the result as string
             bufFlag = 0  #reset flag to take in next dataset
-            print(result)
+            action.value = result
         learnflag = False
     print('Stopping learn')
 
@@ -64,21 +62,23 @@ def dataFromArduino(queue):
     print('Running dataFromArduino')
     count = 0
     
-    while (count < 3000):
+    while (count < 4000):
         queue.put([count, count])
         count += 1
         
     print('Stopping dataFromArduino')
     
 if __name__ == '__main__':
-    queue = Queue()
+    queue = Queue() # Store real-time data from Arduino
+    
+    manager = Manager()
+    action = manager.Value(c_char_p, "Hello")
     
     handshake(True)
     p1 = Process(target=dataFromArduino, args=(queue,))
+    p2 = Process(target=learn, args=(queue, action,))
     p1.start()
-    p1.join()
-
-    p2 = Process(target=learn, args=(queue,))
     p2.start()
+    p1.join()
     p2.join()
     sys.exit()
