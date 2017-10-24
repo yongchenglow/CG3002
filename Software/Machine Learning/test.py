@@ -52,6 +52,10 @@ def learn(queue, action):
             ##### Predict #####
             result = clf.predict(X)   
             result = stats.mode(result) #find the mode in result
+            result = np.array(result[0])
+            result = str(int(result))
+        
+        
             result = ml.result_output(result) #output the result as string
             bufFlag = 0  #reset flag to take in next dataset
             action.value = result
