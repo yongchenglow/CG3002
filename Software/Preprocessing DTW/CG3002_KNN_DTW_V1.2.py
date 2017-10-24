@@ -116,10 +116,15 @@ for i in range(0,9):
     final_3 = []
     final_4 = []
     
-    
 
+'''for x in zip(*collate):
+  for y in x:
+    print(y+'\t', end='')
+  print('\n')'''
 collate = pd.DataFrame(collate)
-print (collate.isnull().any())
+collate = collate.T
+print(collate)
+#print (collate.isnull().any())
 
 collate.to_csv('BusdriverDTW.csv')
 

@@ -14,6 +14,7 @@ from Crypto.Cipher import AES
 from Crypto import Random
 
 from scipy import signal
+from scipy import stats
 import pandas as pd
 import numpy as np
 from sklearn.svm import SVC
@@ -29,8 +30,13 @@ rawData = []
 final_result = None
 arduinoFlag = True
 start = time.time()
+
+##### load model #####
 clf = joblib.load('trained_model.sav') 
+
+##### Software system start ##### 
 while (arduinoFlag == True):
+    
     ##### buffer #####
     bufFlag = 0
     if(time.time()-start == 20.0):
@@ -54,8 +60,9 @@ while (arduinoFlag == True):
         
        
         ##### Predict #####
-        result = clf.predict(X)        
-        bufFlag = 0  
+        result = clf.predict(X)   
+        result = stats.mode(result)
+        bufFlag = 0  #reset flag to take in next dataset
         
 def dataFromArduino():
     global rawData
