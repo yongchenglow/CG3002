@@ -71,7 +71,7 @@ clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
 
 ##### Save model #####
-joblib.dump(clf, 'trained_model_241017.pkl') 
+joblib.dump(clf, 'trained_model.pkl') 
 
 
 ##### Applying model to test set #####
