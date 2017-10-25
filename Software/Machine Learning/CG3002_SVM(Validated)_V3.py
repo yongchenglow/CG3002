@@ -21,7 +21,7 @@ from ML_FUNCTIONS import time_features, segment_signal
 from multiprocessing import Process
 
 start = time.time()
-df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/filtered_23OCT2017.csv') 
+df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/filtered_activities_24OCT2017.csv') 
 
 ##### label encoder #####
 y = pd.DataFrame(df['LABELS'])
@@ -65,7 +65,7 @@ y_list = np.floor(y_list)
 
 ##### Training and Validation #####
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(time_feature_list,
-                                                   y_list, test_size = 0.3)
+                                                   y_list, test_size = 0.25)
 clf = neighbors.KNeighborsClassifier(n_neighbors = 10)
 clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
