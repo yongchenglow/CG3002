@@ -9,6 +9,7 @@ from Crypto import Random
 from scipy import signal
 import pandas as pd
 import numpy as np
+import pickle
 from sklearn import preprocessing, cross_validation, metrics, neighbors
 from sklearn.svm import SVC
 from sklearn.cross_validation import cross_val_score
@@ -71,12 +72,14 @@ clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
 
 ##### Save model #####
-joblib.dump(clf, 'trained_model.pkl') 
+with open('my_trained_classifier.pkl', 'wb') as fid:
+    pickle.dump(clf, fid)    
 
 
 ##### Applying model to test set #####
 y_predict = clf.predict(X_test)
-print(y_predict)
+
+#print(y_predict)
 
 ##### Average score achieved in validation K=10 #####
 validate_score = cross_val_score(clf, time_feature_list, y_list, cv= 10).mean()
