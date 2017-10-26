@@ -33,16 +33,21 @@ while True:
     dataList = []
     length = 18
     
-    number = ser.read()
-    packetNumber = int.from_bytes(number, byteorder='big', signed=True)
+    number1 = ser.read()
+    number2 = ser.read()
+    packetNumber = int.from_bytes(number2+number1, byteorder='big', signed=True)
     # Read in the other values of the Data Packet
     for i in range(0, length):
-        item = int.from_bytes(ser.read(), byteorder='big', signed=True)      # Read in the data send by the Arduino
+        item1 = ser.read()
+        item2 = ser.read()
+        item = int.from_bytes(item2 + item1, byteorder='big', signed=True)      # Read in the data send by the Arduino
         dataList.append(item)          # Store the data into a list
         checkSum = checkSum ^ item      # Calculate the checksum by taking XOR
     
     # Read in the Checksum
-    dataList.append(int.from_bytes(ser.read(), byteorder='big', signed=True))
+    check1 = ser.read()
+    check2 = ser.read()
+    dataList.append(int.from_bytes(check2 + check1, byteorder='big', signed=True))
     
     #print(dataList) 
     #print(checkSum) 
