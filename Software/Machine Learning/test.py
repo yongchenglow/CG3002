@@ -11,6 +11,7 @@ from multiprocessing import Process, Queue, Manager
 from ctypes import c_char_p
 import numpy as np
 import pickle
+import pandas as pd
 from scipy import stats
 from sklearn.externals import joblib
 from sklearn import preprocessing
@@ -29,14 +30,27 @@ def learn(queue):
             while (count < 60):
                 rawData.append(queue.get())
                 count += 1
-
-            #X = np.array(rawData)
-            X = np.array(rawData, dtype=int, copy=True) 
-            X = preprocessing.normalize(X) #normalize the dataset
-            #X = ml.segment_signal(X, 50) #segmentation to 3d for feature extraction
             
-           # time_feature_list = []
-            #time_feature_list = ml.time_features(X, time_feature_list) #feature extraction and conver to 2d
+            test = pd.read_csv("file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/data231017/turnclap/turnclap6.csv")
+            test = preprocessing.normalize(test)
+            test = ml.segment_signal(test, 50) #segmentation to 3d for feature extraction
+            feature_list = []
+            feature_list = ml.time_features(test,feature_list) #feature extraction and conver to 2d
+            
+            ##### Applying model to test set #####
+            result = clf.predict(feature_list)
+            
+            result = stats.mode(result) #find the mode in result
+            result = np.array(result[0])
+            result = str(int(result))
+            result = ml.result_output(result)
+            print(result)
+            '''X = np.array(rawData, dtype=int, copy=True) 
+            X = preprocessing.normalize(X) #normalize the dataset
+            X = ml.segment_signal(X, 50) #segmentation to 3d for feature extraction
+            
+            time_feature_list = []
+            time_feature_list = ml.time_features(X, time_feature_list) #feature extraction and conver to 2d
             
             ##### Predict #####
             result = clf.predict(X)   
@@ -46,7 +60,7 @@ def learn(queue):
             
             result = ml.result_output(result) #output the result as string
             action.value = result
-            print(result)
+            print(result)'''
             print(time.time() - start)
             start = time.time()
             if (i == 20):
