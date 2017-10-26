@@ -22,7 +22,7 @@ from ML_FUNCTIONS import time_features, segment_signal
 from multiprocessing import Process
 
 start = time.time()
-df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/filtered_activities_24OCT2017.csv') 
+df = pd.read_csv('/home/pi/Desktop/CG3002/Software/DanceDanceData/filtered_activities_24OCT2017.csv') 
 
 ##### label encoder #####
 y = pd.DataFrame(df['LABELS'])

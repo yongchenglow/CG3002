@@ -4,6 +4,8 @@ import socket
 import base64
 from Crypto.Cipher import AES
 from Crypto import Random
+import random
+
 
 from multiprocessing import Process, Queue, Manager
 from ctypes import c_char_p
@@ -19,30 +21,34 @@ def learn(queue):
         clf = pickle.load(fid)
     i = 0
 
+    start = time.time()
     while (flags['logout'] == False):
         if (flags['dataReady'] == True):
             rawData = []
             count = 0
-            while (count < 3000):
+            while (count < 60):
                 rawData.append(queue.get())
                 count += 1
 
             #X = np.array(rawData)
             X = np.array(rawData, dtype=int, copy=True) 
             X = preprocessing.normalize(X) #normalize the dataset
-            X = ml.segment_signal(X, 50) #segmentation to 3d for feature extraction
+            #X = ml.segment_signal(X, 50) #segmentation to 3d for feature extraction
             
-            time_feature_list = []
-            time_feature_list = ml.time_features(X, time_feature_list) #feature extraction and conver to 2d
+           # time_feature_list = []
+            #time_feature_list = ml.time_features(X, time_feature_list) #feature extraction and conver to 2d
             
             ##### Predict #####
-            result = clf.predict(time_feature_list)   
+            result = clf.predict(X)   
             result = stats.mode(result) #find the mode in result
-            result = np.array(result[0])
+            result = np.array(result[1])
             result = str(int(result))
             
             result = ml.result_output(result) #output the result as string
             action.value = result
+            print(result)
+            print(time.time() - start)
+            start = time.time()
             if (i == 20):
                 action.value = 'logout  '
             i += 1
@@ -71,12 +77,12 @@ def toServer(s):
 def dataFromArduino(queue):
     count = 0
     
-    while (flags['logout'] == False & count < 3000):
-        queue.put([count, count, count, count, count, count, count, count, count])
+    while (flags['logout'] == False):
+        number = random.randint(0, 32000)
+        queue.put([number, number, number, number, number, number, number, number, number])
         count += 1
-        if (count == 3000):
+        if (count % 60 == 0):
             flags['dataReady'] = True
-            count = 0
         else:
             flags['dataReady'] = False
     
@@ -90,17 +96,17 @@ if __name__ == '__main__':
     
     ip = sys.argv[1]
     port = int(sys.argv[2])
-    s.connect((ip,port))
+    #s.connect((ip,port))
     
     p1 = Process(target=dataFromArduino, args=(queue,))
     p2 = Process(target=learn, args=(queue,))
-    p3 = Process(target=toServer, args=(s,))
+    #p3 = Process(target=toServer, args=(s,))
     p1.start()
     p2.start()
-    p3.start()
+    #p3.start()
 
     p2.join()
-    p3.join()
+    #p3.join()
     while (queue.empty() == False):
         queue.get()
     p1.join()
