@@ -98,7 +98,7 @@ void setup() {
     accelgyro.initialize();
     accelgyro.setFullScaleGyroRange(MPU6050_ACCEL_FS_4);
     accelgyro.setFullScaleAccelRange(MPU6050_GYRO_FS_500);
-    //accelgyro.setDLPFMode(3);
+    accelgyro.setDLPFMode(3);
 
     // verify connection
     Serial.println("Testing device connections...");
@@ -168,8 +168,6 @@ void loop() {
         Serial.write((uint8_t)(gy >> 8)); Serial.write((uint8_t)(gy & 0xFF));
         Serial.write((uint8_t)(gz >> 8)); Serial.write((uint8_t)(gz & 0xFF));
     #endif
-
-  //delay(100);
   
   // Change to reading of second accelerometer
   digitalWrite(accFirst, HIGH);

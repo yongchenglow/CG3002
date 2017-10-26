@@ -14,6 +14,16 @@ HELLO = b"\x02"
 # Handshake Flags
 handshake_flag = True
 
+# Constatns
+sampleSize = 3000
+numberOfSamples = 0
+cumilativeCurrent = 0
+cumilativeVoltage = 0
+cumilativePower = 0
+energyConsumption = 0
+totalTime = 0
+
+
 # Handshake condition
 while handshake_flag:
     time.sleep(1)                       # 1 second pause timing
@@ -27,7 +37,7 @@ while handshake_flag:
 
         
 # While Loop to receive data
-while True:
+while numberOfSamples < sampleSize:
     # Variables
     checkSum = 0
     dataList = []
@@ -63,7 +73,19 @@ while True:
                     dataList[6], dataList[7], dataList[8],
                     dataList[10], dataList[11], dataList[12]]
             writer.writerow(data)
+            
+        numberOfSamples += 1
+        cumilativeVoltage += dataList[14]
+        cumilativeCurrent += dataList[15]
+        cumilativePower += dataList[16]
+        totalTime += dataList[17]
         
     else:
         print('Transmission Failed')
         ser.write(NACK)                 # Send NACK if an kind of error occurs
+        
+print('Average Voltage: ', round((cumilativeVoltage/numberOfSamples),2), 'mV')
+print('Average Current: ', round((cumilativeCurrent/numberOfSamples),2), 'mA')
+print('Average Power: ', round((cumilativePower/numberOfSamples),2), 'W')
+energyConsumption = round((cumilativePower/numberOfSamples)*(totalTime/1000/60/60),2)
+print('Energy Comsumption: ', energyConsumption, 'kWh')
