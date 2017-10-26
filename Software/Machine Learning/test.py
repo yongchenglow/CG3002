@@ -15,7 +15,8 @@ from sklearn import preprocessing
 import ML_FUNCTIONS as ml
 
 def learn(queue):
-    clf = joblib.load('trained_model.pkl') # load model
+    with open('trained_model.pkl') as input:
+        clf = joblib.load(input) # load model
     i = 0
 
     while (flags['logout'] == False):
