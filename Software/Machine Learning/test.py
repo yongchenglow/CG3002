@@ -8,15 +8,15 @@ from Crypto import Random
 from multiprocessing import Process, Queue, Manager
 from ctypes import c_char_p
 import numpy as np
-
+import pickle
 from scipy import stats
 from sklearn.externals import joblib
 from sklearn import preprocessing
 import ML_FUNCTIONS as ml
 
 def learn(queue):
-    with open('trained_model.pkl') as input:
-        clf = joblib.load(input) # load model
+    with open('my_trained_classifier.pkl', 'rb') as fid:
+        clf = pickle.load(fid)
     i = 0
 
     while (flags['logout'] == False):
