@@ -11,12 +11,13 @@ float current_sum;
 
 unsigned long prev_time;
 unsigned long curr_time;
+unsigned long printTime;
 float time;
 
 float energy_consumed;
 
 void setup(){
-	Serial.begin(38400);
+	Serial.begin(115200);
 
 	energy_consumed = 0;
 	
@@ -40,6 +41,7 @@ void loop() {
 	
 	//logging the timestamp and duration at the end of the sampling
 	curr_time = millis();
+  printTime = curr_time - prev_time;
 	time = (curr_time - prev_time)/1000.0/60.0/60.0; //length of time for the N sampled data, in terms of hours
 	prev_time = curr_time;
 	
@@ -59,12 +61,6 @@ void loop() {
 	float power = voltage * current;
 	energy_consumed = energy_consumed + (power * time);
 	
-	
-	
-	
-	
-	
-	
 	// Printing to serial monitor
 	Serial.print(current, 4);
 	Serial.println(" A");
@@ -77,6 +73,10 @@ void loop() {
 	
 	Serial.print(energy_consumed, 6);
 	Serial.println(" Wh\n");
+
+  Serial.println(printTime);
+
+  delay(1000);
 }
 
 // remap values from analogRead from 0-1023 to 0v-5v

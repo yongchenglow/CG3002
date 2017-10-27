@@ -31,7 +31,7 @@ typedef struct DataPacket{
   int16_t voltage;
   int16_t current;
   int16_t power;
-  int16_t cumilativePower;
+  int16_t timeTaken;
 } DataPacket;
 
 // Packet Declaration
@@ -91,8 +91,8 @@ void handshake() {
   }
 }
 
-// Functiont to Serial1lize the data packet
-void Serial1ize(int16_t *packet){
+// Functiont to Seriallize the data packet
+void Serialize(int16_t *packet){
   int16_t checksum = 0;
   packet[0] = backOfBuffer;
   memcpy(packet+1, &data, (size_t) sizeof(data));
@@ -148,7 +148,8 @@ void readDataFromPowerCircuit(){
   // Power = Voltage * Current
   data.power = (voltageSensorValue * 2 * (currentSensorValue / (10 * RS)))*1000;
 
-  data.cumilativePower = rand()-rand();
+  // Calculate the time taken in miliseconds taken for the cycle
+  data.timeTaken = xPeriod/2;
 }
 
 /**
@@ -159,7 +160,7 @@ void readAndPackageData(){
   if(bufferFullFlag == 0){
     readDataFromSensors();
     readDataFromPowerCircuit();
-    Serial1ize(_buffer[backOfBuffer]);
+    Serialize(_buffer[backOfBuffer]);
     backOfBuffer = (backOfBuffer + 1)%bufferSize;
   }
 
@@ -228,6 +229,7 @@ void sendDataToRaspberryPi(void *p){
             buf[0] = _buffer[(frontOfBuffer+i)%bufferSize][j] & 255;
             buf[1] = (_buffer[(frontOfBuffer+i)%bufferSize][j] >> 8) & 255;
             Serial1.write(buf, sizeof(buf));
+            
         }
       }
 
