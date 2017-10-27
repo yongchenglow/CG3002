@@ -34,19 +34,22 @@ typedef struct DataPacket{
   int16_t timeTaken;
 } DataPacket;
 
-// Packet Declaration
 const int bufferSize = 10;
 int16_t _buffer[bufferSize][20];
 int frontOfBuffer = 0;
 int backOfBuffer = 0;
 int bufferFullFlag = 0;
+int start = 0;
+int16_t idleTime = 0;
+unsigned long cumilativeIdleVoltage = 0;
+unsigned long cumilativeIdleCurrent = 0;
 DataPacket data;
 
 // Device ID
 int16_t ARM_ID = 0, GYRO_ID = 1, THIGH_ID = 2, POWER_ID = 3;
 
 // Packet code
-int16_t ACK = 0, NAK = 1, HELLO = 2, READ = 3, WRITE = 4, DATA_RESP = 5;
+int16_t ACK = 0, NAK = 1, HELLO = 2, READ = 3, WRITE = 4, DATA_RESP = 5, STOP = 6;
 
 // Create Sempaphore
 SemaphoreHandle_t semaphore = xSemaphoreCreateBinary();
@@ -86,6 +89,7 @@ void handshake() {
       }
       if (reply == ACK) {
         handshake_flag = 0;
+        start = 1;
       }
     }
   }
@@ -150,6 +154,18 @@ void readDataFromPowerCircuit(){
 
   // Calculate the time taken in miliseconds taken for the cycle
   data.timeTaken = xPeriod/2;
+
+  if(idleTime != 0){
+    cumilativeIdleVoltage += data.voltage;
+    cumilativeIdleCurrent += data.current;
+    data.timeTaken = data.timeTaken + idleTime;
+    data.voltage = cumilativeIdleVoltage/idleTime/16;
+    data.current = cumilativeIdleCurrent/idleTime/16;
+    data.power = data.voltage * data.current;
+    idleTime = 0;
+    cumilativeIdleVoltage = 0;
+    cumilativeIdleCurrent = 0;
+  }
 }
 
 /**
@@ -180,7 +196,9 @@ void readDataAtFullCycle(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
-      readAndPackageData();
+      if(start == 1){
+        readAndPackageData();
+      }
       xSemaphoreGive(semaphore);
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod/ portTICK_PERIOD_MS);
@@ -195,8 +213,10 @@ void readDataAtHalfCycle(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
   vTaskDelayUntil(&xLastWakeTime, (xPeriod/2)/ portTICK_PERIOD_MS);
   for(;;){
-    if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){      
-      readAndPackageData();
+    if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
+      if(start == 1){      
+        readAndPackageData();
+      }
       xSemaphoreGive(semaphore);
     }
     vTaskDelayUntil(&xLastWakeTime, xPeriod/ portTICK_PERIOD_MS);
@@ -212,47 +232,69 @@ void readDataAtHalfCycle(void *p){
 void sendDataToRaspberryPi(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
   for(;;){
-    if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){ 
-      int trys = 0;
-      int reply;
-      int numberOfPacketsInBuffer;
-
-      if(frontOfBuffer < backOfBuffer){
-        numberOfPacketsInBuffer = backOfBuffer - frontOfBuffer;
-      } else {
-        numberOfPacketsInBuffer = backOfBuffer + bufferSize - frontOfBuffer;
-      }
-
-      for(int i = 0; i < numberOfPacketsInBuffer; i++){
-        for(int j = 0; j < 20; j++){
-            byte buf[2];
-            buf[0] = _buffer[(frontOfBuffer+i)%bufferSize][j] & 255;
-            buf[1] = (_buffer[(frontOfBuffer+i)%bufferSize][j] >> 8) & 255;
-            Serial1.write(buf, sizeof(buf));
-            
+    if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
+      if(start == 1){
+        int trys = 0;
+        int reply;
+        int numberOfPacketsInBuffer;
+  
+        if(frontOfBuffer < backOfBuffer){
+          numberOfPacketsInBuffer = backOfBuffer - frontOfBuffer;
+        } else {
+          numberOfPacketsInBuffer = backOfBuffer + bufferSize - frontOfBuffer;
         }
-      }
-
-      while(!Serial1.available()){
+  
+        for(int i = 0; i < numberOfPacketsInBuffer; i++){
+          Serial.print("[");
+          for(int j = 0; j < 20; j++){
+              byte buf[2];
+              buf[0] = _buffer[(frontOfBuffer+i)%bufferSize][j] & 255;
+              buf[1] = (_buffer[(frontOfBuffer+i)%bufferSize][j] >> 8) & 255;
+              Serial1.write(buf, sizeof(buf));
+              Serial.print(_buffer[(frontOfBuffer+i)%bufferSize][j]);
+              Serial.print(", ");
+          }
+          Serial.println("]");
+        }
+  
+        while(!Serial1.available()){
+          
+        }
         
-      }
-      
-      if (Serial1.available()) {
+        if (Serial1.available()) {
           reply = Serial1.read();
           if (reply == ACK) {
             frontOfBuffer = (frontOfBuffer+1)%10;
+          } else if (reply == STOP){
+            start = 0;
           }
-      }
-
-      while(!Serial1.available()){
+        }
+  
+        while(!Serial1.available()){
+          
+        }
         
-      }
-      
-      if (Serial1.available()) {
+        if (Serial1.available()) {
           reply = Serial1.read();
           if (reply == ACK) {
             frontOfBuffer = (frontOfBuffer+1)%10;
+          } else if (reply == STOP){
+            start = 0;
           }
+        }
+      } else {
+        int reply;
+        if (Serial1.available()){
+          reply = Serial1.read();
+          if(reply == ACK){
+            start = 1;
+          }
+        }
+
+        readDataFromPowerCircuit();
+        idleTime += 16;
+        cumilativeIdleVoltage += data.voltage;
+        cumilativeIdleCurrent += data.current;
       }
       xSemaphoreGive(semaphore);
     }
@@ -282,6 +324,7 @@ void setup() {
   digitalWrite2f(accThird, HIGH);
   
   Serial1.begin(115200);
+  Serial.begin(115200);
     
   handshake();
   accelgyro.initialize();
