@@ -50,7 +50,7 @@ def dataToServer(action, voltage, current, power, cumPower):
 def learn(X):  
     print('learn')
     with open('my_trained_classifier_NEW.pkl', 'rb') as fid:
-        clf = pickle.load(fid)
+        clf = joblib.load(fid)
         
     test = pd.read_csv("/home/pi/Desktop/CG3002/Software/DanceDanceData/halloweenData/busdriver/busdriver5.csv")
     test = preprocessing.normalize(test)

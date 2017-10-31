@@ -72,8 +72,8 @@ clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
 
 ##### Save model #####
-with open('my_trained_classifier.pkl', 'wb') as fid:
-    pickle.dump(clf, fid)    
+with open('my_trained_classifier_joblib_31Oct.pkl', 'wb') as fid:
+    joblib.dump(clf, fid)    
 
 
 ##### Applying model to test set #####
