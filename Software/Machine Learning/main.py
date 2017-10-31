@@ -11,10 +11,14 @@ from Crypto import Random
 import numpy as np
 import pickle
 import pandas as pd
+from sklearn import preprocessing, cross_validation, metrics, neighbors
+import ML_FUNCTIONS as ml
 from scipy import stats
 from sklearn.externals import joblib
 from sklearn import preprocessing
 import ML_FUNCTIONS as ml
+
+
 
 def handshake(handshake_flag):
     ACK = b"\x00"

@@ -63,7 +63,10 @@ for i in range(nLayers):
     y_list = np.append(y_list, row)
 
 y_list = np.floor(y_list)
-
+y_list = pd.DataFrame(y_list)
+time_feature_list = pd.DataFrame(time_feature_list)
+y_list.to_csv("y_list.csv")
+time_feature_list.to_csv("time_feature_list.csv")
 ##### Training and Validation #####
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(time_feature_list,
                                                    y_list, test_size = 0.25)
@@ -71,10 +74,9 @@ clf = neighbors.KNeighborsClassifier(n_neighbors = 10)
 clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
 
-##### Save model #####
+'''##### Save model #####
 with open('my_trained_classifier_joblib_31Oct.pkl', 'wb') as fid:
-    joblib.dump(clf, fid)    
-
+    joblib.dump(clf, fid)    '''
 
 
 ##### Applying model to test set #####
