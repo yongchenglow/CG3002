@@ -22,7 +22,11 @@ from ML_FUNCTIONS import time_features, segment_signal
 from multiprocessing import Process
 
 start = time.time()
+<<<<<<< HEAD
 df = pd.read_csv('/home/pi/Desktop/CG3002/Software/DanceDanceData/data311017/Consolidated_311017.csv') 
+=======
+df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/data311017/Consolidated_311017.csv') 
+>>>>>>> 09967268289872825eff6f9e950eb76c7c62bea3
 
 ##### label encoder #####
 y = pd.DataFrame(df['LABELS'])
@@ -76,6 +80,7 @@ accuracy_rate_1 = clf.score(X_test, y_test)
 ##### Save model #####
 with open('my_trained_classifier_joblib_31Oct.pkl', 'wb') as fid:
     joblib.dump(clf, fid)    
+
 
 
 ##### Applying model to test set #####
