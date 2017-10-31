@@ -81,7 +81,7 @@ clf = SVC()
 clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
 
-test = pd.read_csv("file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/data231017/360window/360window5.csv")
+test = pd.read_csv("file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/dance_moves/busdriver/busdriver.csv")
 test = preprocessing.normalize(test)
 test = ml.segment_signal(test, 50) #segmentation to 3d for feature extraction
 feature_list = []
