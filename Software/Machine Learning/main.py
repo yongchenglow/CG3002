@@ -35,7 +35,7 @@ def connectServer(ip, port):
     print('Server connected')
     
 def dataToServer(action, voltage, current, power, cumPower):
-    msg = '#' + action + '|' + current + '|' + voltage + '|' + power + '|' + cumPower    
+    msg = '#' + action + '|' + str(current) + '|' + str(voltage) + '|' + str(power) + '|' + str(cumPower)    
     length = 16 - (len(msg) % 16);
     msg += length * ' '
     
@@ -49,10 +49,10 @@ def dataToServer(action, voltage, current, power, cumPower):
 
 def learn(X):  
     print('learn')
-    with open('my_trained_classifier_3110.pkl', 'rb') as fid:
+    with open('my_trained_classifier_NEW.pkl', 'rb') as fid:
         clf = pickle.load(fid)
         
-    '''test = pd.read_csv("/home/pi/Desktop/CG3002/Software/DanceDanceData/data231017/frontback/frontback5.csv")
+    test = pd.read_csv("/home/pi/Desktop/CG3002/Software/DanceDanceData/halloweenData/busdriver/busdriver5.csv")
     test = preprocessing.normalize(test)
     test = ml.segment_signal(test, 50) #segmentation to 3d for feature extraction
     feature_list = []
@@ -65,9 +65,9 @@ def learn(X):
     result = np.array(result[0])
     result = str(int(result))
     result = ml.result_output(result)
-    print(result)'''
+    print(result)
     
-    X = preprocessing.normalize(X) #normalize the dataset
+    '''X = preprocessing.normalize(X) #normalize the dataset
     X = ml.segment_signal(X, 50) #segmentation to 3d for feature extraction   
     time_feature_list = []
     time_feature_list = ml.time_features(X, time_feature_list) #feature extraction and conver to 2d
@@ -78,7 +78,7 @@ def learn(X):
     result = np.array(result[0])
     result = str(int(result))   
     result = ml.result_output(result) #output the result as string
-    print(result)
+    print(result)'''
     return result
 
 def dataFromArduino():
@@ -131,13 +131,13 @@ def dataFromArduino():
     
     return {'buffer': queue, 'size' : sampleSize, 'cumVoltage': cumVoltage, 'cumCurrent': cumCurrent, 'cumPower': cumPower}
 
-if len(sys.argv) != 3:
+'''if len(sys.argv) != 3:
     print('Invalid number of arguments')
     print('python client_pi.py [IP address] [Port]')
     sys.exit()
     
 ip = sys.argv[1]
-port = int(sys.argv[2])
+port = int(sys.argv[2])'''
 
 ser = serial.Serial('/dev/ttyS0', 115200)
 secret_key = b'leader daryl goh'
@@ -152,9 +152,9 @@ energyConsumption = 0
 totalTime = 0
     
 handshake(True)
-connectServer(ip, port)
-time.sleep(40)
-print('Start moving!')
+#connectServer(ip, port)
+#time.sleep(40)
+#print('Start moving!')
 while (True):
     results = dataFromArduino()
     queue = results['buffer']
@@ -162,7 +162,7 @@ while (True):
     cumulativeCurrent += results['cumCurrent']
     cumulativeVoltage += results['cumVoltage']
     cumulativePower += results['cumPower']
-    #print(size)
+    print(size)
     if (size == 3000):
         rawData = []
         while (size > 0):
@@ -175,5 +175,6 @@ while (True):
         current = round((cumulativeCurrent/3000)/1000,2)
         power = round((cumulativePower/3000)/1000,2)
         cumPower = round(((cumulativePower/3000)/1000)*(totalTime/1000/60/60),2)
-        dataToServer(action, voltage, current, power, cumPower)
+        #dataToServer(action, voltage, current, power, cumPower)
         #time.sleep(3)
+        sys.exit()
