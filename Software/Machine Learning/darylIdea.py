@@ -1,20 +1,37 @@
 import sys
 import time
-import serial
-import queue
-
+import csv
 import socket
 import base64
+import serial
+import queue
 from Crypto.Cipher import AES
 from Crypto import Random
 
+from scipy import signal
+import pandas as pd
 import numpy as np
 import pickle
-import pandas as pd
 from scipy import stats
+from sklearn import preprocessing, cross_validation, metrics, neighbors
+from sklearn.svm import SVC
+from sklearn.cross_validation import cross_val_score
+from sklearn.metrics import confusion_matrix
 from sklearn.externals import joblib
-from sklearn import preprocessing
+import time
 import ML_FUNCTIONS as ml
+
+from multiprocessing import Process
+
+training_label_list = pd.read_csv("y_list.csv")
+training_feature_list = pd.read_csv("time_feature_list.csv")
+
+##### Training and Validation #####
+X_train, X_test, y_train, y_test = cross_validation.train_test_split(training_feature_list,
+                                                   training_label_list, test_size = 0.25)
+clf = neighbors.KNeighborsClassifier(n_neighbors = 10)
+#clf = SVC()
+clf.fit(X_train, y_train)
 
 def handshake(handshake_flag):
     ACK = b"\x00"
@@ -49,8 +66,6 @@ def dataToServer(action, voltage, current, power, cumPower):
 
 def learn(X):  
     print('learn')
-    with open('my_trained_classifier_joblib_31Oct.pkl', 'rb') as fid:
-        clf = joblib.load(fid)
         
     '''test = pd.read_csv("/home/pi/Desktop/CG3002/Software/DanceDanceData/halloweenData/frontback/frontback3.csv")
     test = preprocessing.normalize(test)
@@ -68,7 +83,7 @@ def learn(X):
     print(result)'''
     
     X = preprocessing.normalize(X) #normalize the dataset
-    X = ml.segment_signal(X, 150) #segmentation to 3d for feature extraction   
+    X = ml.segment_signal(X, 50) #segmentation to 3d for feature extraction   
     time_feature_list = []
     time_feature_list = ml.time_features(X, time_feature_list) #feature extraction and conver to 2d
     ##### Predict #####
@@ -105,7 +120,7 @@ def dataFromArduino():
     check2 = ser.read()
     arduinoChecksum = int.from_bytes(check2 + check1, byteorder='big', signed=True)
             
-    print(dataList) 
+    #print(dataList) 
     
     if (arduinoChecksum == checkSum):
         ser.write(ACK)                  # Send ACK to arduino if everything is received
@@ -115,7 +130,7 @@ def dataFromArduino():
         queue.put([dataList[2], dataList[3], dataList[4],
                    dataList[6], dataList[7], dataList[8],
                    dataList[10], dataList[11], dataList[12]])
-        #print('Successful Transmission') 
+        #print('Successful Transmission')
         sampleSize = 1
         cumVoltage = dataList[14]
         cumCurrent = dataList[15]
@@ -131,13 +146,13 @@ def dataFromArduino():
     
     return {'buffer': queue, 'size' : sampleSize, 'cumVoltage': cumVoltage, 'cumCurrent': cumCurrent, 'cumPower': cumPower}
 
-'''if len(sys.argv) != 3:
+if len(sys.argv) != 3:
     print('Invalid number of arguments')
     print('python client_pi.py [IP address] [Port]')
     sys.exit()
     
 ip = sys.argv[1]
-port = int(sys.argv[2])'''
+port = int(sys.argv[2])
 
 ser = serial.Serial('/dev/ttyS0', 115200)
 secret_key = b'leader daryl goh'
@@ -152,9 +167,9 @@ energyConsumption = 0
 totalTime = 0
     
 handshake(True)
-#connectServer(ip, port)
-#time.sleep(40)
-#print('Start moving!')
+connectServer(ip, port)
+time.sleep(50)
+print('Start moving!')
 while (True):
     results = dataFromArduino()
     queue = results['buffer']
@@ -175,6 +190,6 @@ while (True):
         current = round((cumulativeCurrent/3000)/1000,2)
         power = round((cumulativePower/3000)/1000,2)
         cumPower = round(((cumulativePower/3000)/1000)*(totalTime/1000/60/60),2)
-        #dataToServer(action, voltage, current, power, cumPower)
-        #time.sleep(3)
+        dataToServer(action, voltage, current, power, cumPower)
+        time.sleep(3)
         sys.exit()

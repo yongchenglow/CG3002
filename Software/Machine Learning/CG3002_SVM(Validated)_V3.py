@@ -22,7 +22,7 @@ from ML_FUNCTIONS import time_features, segment_signal
 from multiprocessing import Process
 
 start = time.time()
-df = pd.read_csv('/home/pi/Desktop/CG3002/Software/DanceDanceData/filtered_activities_24OCT2017.csv') 
+df = pd.read_csv('/home/pi/Desktop/CG3002/Software/DanceDanceData/data311017/Consolidated_311017.csv') 
 
 ##### label encoder #####
 y = pd.DataFrame(df['LABELS'])
@@ -32,6 +32,7 @@ label = list(le.classes_)
 df['LABELS'] = le.transform(df['LABELS'])
 y = np.array(df['LABELS'])
 X = np.array(df.drop(['LABELS'], 1)) #removing labels
+
 
 ##### normalize #####
 X = preprocessing.normalize(X) #normalize the dataset
@@ -68,6 +69,7 @@ y_list = np.floor(y_list)
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(time_feature_list,
                                                    y_list, test_size = 0.25)
 clf = neighbors.KNeighborsClassifier(n_neighbors = 10)
+#clf = SVC()
 clf.fit(X_train, y_train)
 accuracy_rate_1 = clf.score(X_test, y_test)
 
@@ -88,11 +90,17 @@ validate_score = cross_val_score(clf, time_feature_list, y_list, cv= 10).mean()
 matrix = metrics.confusion_matrix(y_test, y_predict)
 
 
-results = pd.DataFrame(matrix, columns = ['busdriver', 'frontback', 'jumping', 'jumpingjack', 'sidestep', 'squatturnclap',\
-                                          'turnclap', 'wavehands', 'window', 'window360'])
+#results = pd.DataFrame(matrix, columns = ['busdriver', 'frontback', 'jumping', 'jumpingjack', 'sidestep', 'squatturnclap',\
+#                                          'turnclap', 'wavehands', 'window', 'window360'])
     
-results.rename(index ={0:'busdriver', 1:'frontback', 2:'jumping', 3:'jumpingjack', 4:'sidestep', 5:'squatturnclap',\
-                       6:'turnclap', 7:'wavehands', 8:'window', 9:'window360' }, inplace = True)
+#results.rename(index ={0:'busdriver', 1:'frontback', 2:'jumping', 3:'jumpingjack', 4:'sidestep', 5:'squatturnclap',\
+#                       6:'turnclap', 7:'wavehands', 8:'window', 9:'window360' }, inplace = True)
+    
+results = pd.DataFrame(matrix, columns = ['Wavehands', 'Busdriver', 'Frontback', 'Sidestep', 'Jumping', 'Jumpingjacks',\
+                                          'Turnclap', 'Squatturnclap', 'Window', 'Windowspin'])
+    
+results.rename(index ={0:'Wavehands', 1:'Busdriver', 2:'Frontback', 3:'Sidestep', 4:'Jumping', 5:'Jumpingjacks',\
+                       6:'Turnclap', 7:'Squatturnclap', 8:'window', 9:'Windowspin' }, inplace = True)
 accuracy = pd.DataFrame([accuracy_rate_1],columns = ['ACCURACY'])
 accuracy.rename(index ={0:'ACCURACY'}, inplace = True)
 results = results.append(accuracy)
