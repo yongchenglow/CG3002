@@ -66,6 +66,8 @@ const GPIO_pin_t gyroFirst = DP30;
 const GPIO_pin_t accSec = DP29;
 const GPIO_pin_t accThird = DP31;
 const TickType_t xPeriod = 16;
+float currentSensorValue = 0;
+float voltageSensorValue = 0;
 
 // Function to initialise the data packet siwth some values
 void initializeDataPacket(){
@@ -133,8 +135,8 @@ void readDataFromSensors(){
  */
 void readDataFromPowerCircuit(){
   // Read Raw values from the INA169 board and voltage divider
-  float currentSensorValue = analogRead(CURRENT_SENSOR_PIN);
-  float voltageSensorValue = analogRead(VOLTAGE_SENSOR_PIN);
+  currentSensorValue = analogRead(CURRENT_SENSOR_PIN);
+  voltageSensorValue = analogRead(VOLTAGE_SENSOR_PIN);
   
   // Remap the ADC value into a voltage number (5V reference)
   currentSensorValue = (currentSensorValue * VOLTAGE_REF) / 1023;
@@ -142,15 +144,15 @@ void readDataFromPowerCircuit(){
   
   // Voltage reading is obtained from divider.
   // Multiply reading by 2 to get the true voltage value of the batteries
-  data.voltage = voltageSensorValue * 2 *1000;
+  data.voltage = int16_t((voltageSensorValue * 2)*1000);
   
   // Follow the equation given by the INA169 datasheet to
   // determine the current flowing through RS. Assume RL = 10k
   // Is = (Vout x 1k) / (RS x RL)
-  data.current = (currentSensorValue / (10 * RS))*1000;
+  data.current = int16_t((currentSensorValue / (10 * RS))*1000);
   
   // Power = Voltage * Current
-  data.power = (voltageSensorValue * 2 * (currentSensorValue / (10 * RS)))*1000;
+  data.power = int16_t((voltageSensorValue * 2 * (currentSensorValue / (10 * RS)))*1000);
 
   // Calculate the time taken in miliseconds taken for the cycle
   data.timeTaken = xPeriod/2;
@@ -159,8 +161,8 @@ void readDataFromPowerCircuit(){
     cumilativeIdleVoltage += data.voltage;
     cumilativeIdleCurrent += data.current;
     data.timeTaken = data.timeTaken + idleTime;
-    data.voltage = cumilativeIdleVoltage/idleTime/16;
-    data.current = cumilativeIdleCurrent/idleTime/16;
+    data.voltage = cumilativeIdleVoltage/idleTime/16.0;
+    data.current = cumilativeIdleCurrent/idleTime/16.0;
     data.power = data.voltage * data.current;
     idleTime = 0;
     cumilativeIdleVoltage = 0;
@@ -309,11 +311,6 @@ void setup() {
   #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
       Fastwire::setup(400, true);
   #endif
-
-  // To speed up analog read
-  sbi(ADCSRA, ADPS2);
-  cbi(ADCSRA, ADPS1);
-  cbi(ADCSRA, ADPS0);
 
   pinMode2f(gyroFirst, OUTPUT);
   pinMode2f(accSec, OUTPUT);
