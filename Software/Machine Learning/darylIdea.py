@@ -46,7 +46,7 @@ def connectServer(ip, port):
     print('Server connected')
     
 def dataToServer(action, voltage, current, power, cumPower):
-    msg = '#' + action + '|' + str(current) + '|' + str(voltage) + '|' + str(power) + '|' + str(cumPower)    
+    msg = '#' + action + '|' + str(voltage) + '|' + str(current) + '|' + str(power) + '|' + str(cumPower)    
     length = 16 - (len(msg) % 16);
     msg += length * ' '
     
@@ -77,7 +77,7 @@ def learn(X):
     print(result)'''
     
     X = preprocessing.normalize(X) #normalize the dataset
-    X = ml.segment_signal(X, 50) #segmentation to 3d for feature extraction   
+    X = ml.segment_signal(X, 100) #segmentation to 3d for feature extraction   
     time_feature_list = []
     time_feature_list = ml.time_features(X, time_feature_list) #feature extraction and conver to 2d
     ##### Predict #####
@@ -162,6 +162,7 @@ cumulativePower = 0
 energyConsumption = 0
 totalTime = 0
 totalRunTime = 0
+div = 0
     
 handshake(True)
 connectServer(ip, port)
@@ -176,7 +177,9 @@ while (True):
     cumulativeVoltage += results['cumVoltage']
     cumulativePower += results['cumPower']
     totalTime += results['totalTime']
-    print(size)
+    if(size % 100 == 0):
+        print(size)
+        
     if (size == 1000):
         rawData = []
         while (size > 0):
@@ -185,13 +188,14 @@ while (True):
         X = np.array(rawData)
         action = learn(X)
         totalRunTime += 1
-        div = totalRunTime * size
+        div = totalRunTime * 1000
         
-        voltage = round((cumulativeVoltage/1000)/1000,2)
-        current = round((cumulativeCurrent/1000)/1000,2)
-        power = round((cumulativePower/1000)/1000,2)
-        cumPower = round(((cumulativePower/1000)/1000)*(totalTime/1000/60/60),2)
+        voltage = round((cumulativeVoltage/div)/1000,2)
+        current = round((cumulativeCurrent/div)/1000,2)
+        power = round((cumulativePower/div)/1000,2)
+        cumPower = round(((cumulativePower/div)/1000)*(totalTime/1000/60/60),2)
         dataToServer(action, voltage, current, power, cumPower)
         print(time.time() - start)
+        start = time.time()
         time.sleep(3)
         #sys.exit()
