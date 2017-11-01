@@ -135,6 +135,7 @@ def dataFromArduino():
         cumVoltage = dataList[14]
         cumCurrent = dataList[15]
         cumPower = dataList[16]
+        totalTime = dataList[17]
         
     else:
         print('Transmission Failed')
@@ -142,9 +143,10 @@ def dataFromArduino():
         cumVoltage = 0
         cumCurrent = 0
         cumPower = 0
+        totalTime = 0
         ser.write(NACK)                 # Send NACK if an kind of error occurs
     
-    return {'buffer': queue, 'size' : sampleSize, 'cumVoltage': cumVoltage, 'cumCurrent': cumCurrent, 'cumPower': cumPower}
+    return {'buffer': queue, 'size' : sampleSize, 'cumVoltage': cumVoltage, 'cumCurrent': cumCurrent, 'cumPower': cumPower, 'totalTime': totalTime}
 
 if len(sys.argv) != 3:
     print('Invalid number of arguments')
@@ -165,11 +167,13 @@ cumulativeVoltage = 0
 cumulativePower = 0
 energyConsumption = 0
 totalTime = 0
+totalRunTime = 0
     
 handshake(True)
 connectServer(ip, port)
 time.sleep(50)
 print('Start moving!')
+start = time.time()
 while (True):
     results = dataFromArduino()
     queue = results['buffer']
@@ -177,19 +181,23 @@ while (True):
     cumulativeCurrent += results['cumCurrent']
     cumulativeVoltage += results['cumVoltage']
     cumulativePower += results['cumPower']
+    totalTime += results['totalTime']
     print(size)
-    if (size == 3000):
+    if (size == 1000):
         rawData = []
         while (size > 0):
             rawData.append(queue.get())
             size -= 1
         X = np.array(rawData)
         action = learn(X)
+        totalRunTime += 1
+        div = totalRunTime * size
         
         voltage = round((cumulativeVoltage/3000)/1000,2)
         current = round((cumulativeCurrent/3000)/1000,2)
         power = round((cumulativePower/3000)/1000,2)
         cumPower = round(((cumulativePower/3000)/1000)*(totalTime/1000/60/60),2)
         dataToServer(action, voltage, current, power, cumPower)
-        time.sleep(3)
+        print(time.time() - start)
+        #time.sleep(3)
         sys.exit()
