@@ -1,6 +1,5 @@
 import sys
 import time
-import csv
 import socket
 import base64
 import serial
@@ -8,25 +7,20 @@ import queue
 from Crypto.Cipher import AES
 from Crypto import Random
 
-from scipy import signal
 import pandas as pd
 import numpy as np
-import pickle
 from scipy import stats
 from sklearn import preprocessing, cross_validation, metrics, neighbors
 from sklearn.svm import SVC
 from sklearn.cross_validation import cross_val_score
 from sklearn.metrics import confusion_matrix
 from sklearn.externals import joblib
-import time
 import ML_FUNCTIONS as ml
-
-from multiprocessing import Process
 
 training_label_list = pd.read_csv("y_list.csv")
 training_feature_list = pd.read_csv("time_feature_list.csv")
 
-##### Training and Validation #####
+##### Training and Validation ####
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(training_feature_list,
                                                    training_label_list, test_size = 0.25)
 clf = neighbors.KNeighborsClassifier(n_neighbors = 10)
@@ -193,11 +187,11 @@ while (True):
         totalRunTime += 1
         div = totalRunTime * size
         
-        voltage = round((cumulativeVoltage/3000)/1000,2)
-        current = round((cumulativeCurrent/3000)/1000,2)
-        power = round((cumulativePower/3000)/1000,2)
-        cumPower = round(((cumulativePower/3000)/1000)*(totalTime/1000/60/60),2)
+        voltage = round((cumulativeVoltage/1000)/1000,2)
+        current = round((cumulativeCurrent/1000)/1000,2)
+        power = round((cumulativePower/1000)/1000,2)
+        cumPower = round(((cumulativePower/1000)/1000)*(totalTime/1000/60/60),2)
         dataToServer(action, voltage, current, power, cumPower)
         print(time.time() - start)
-        #time.sleep(3)
-        sys.exit()
+        time.sleep(3)
+        #sys.exit()

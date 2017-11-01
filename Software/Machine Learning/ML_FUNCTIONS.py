@@ -88,6 +88,16 @@ def result_output(result):
             }
     return action_map[result]
 
+def result_output_02112017(result):
+    action_map = {
+            '0': 'busdriver',
+            '1': 'frontback',
+            '2': 'jumping',
+            '3': 'sidestep',
+            '4': 'wavehands',
+            
+            }
+    return action_map[result]
 '''def result_output(result):
     action_map = {
             '0': 'Wavehands',
