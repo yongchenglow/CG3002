@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np   
 import matplotlib.pyplot as plt
 from scipy.signal import butter, filtfilt
+from scipy import stats
 
 def segment_signal(df, window_size):
             N = df.shape[0]
@@ -88,15 +89,7 @@ def result_output(result):
             }
     return action_map[result]
 
-def result_output_02112017(result):
-    action_map = {
-            '0': 'busdriver',
-            '1': 'frontback',
-            '2': 'jumping',
-            '3': 'sidestep',
-            '4': 'wavehands',
-            
-            }
+
     return action_map[result]
 '''def result_output(result):
     action_map = {
@@ -113,5 +106,25 @@ def result_output_02112017(result):
             }
     return action_map[result]'''
     
+def final_check(array, move):
+    count = 0 
+    if(move in array):
+        count = count+1
+    check1 = stats.mode(array[:3:1])
+    check2 = stats.mode(array[4:6:1])
+    check3 = stats.mode(array[7::1])
+    final = check1 + check2 + check3
+    if(count == 3):
+        return move #if all 3 windows return 3 of the same mode, return the same move
+    else:
+        return stats.mode(final) # returns the mode of the 3 windows, still not a reliable check
+    
+    
 
+    
+    
+    
+    
+    
+    
     
