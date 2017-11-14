@@ -34,7 +34,7 @@ typedef struct DataPacket{
   int16_t timeTaken;
 } DataPacket;
 
-const int bufferSize = 10;
+const int bufferSize = 20;
 int16_t _buffer[bufferSize][20];
 int frontOfBuffer = 0;
 int backOfBuffer = 0;
@@ -270,6 +270,7 @@ void sendDataToRaspberryPi(void *p){
           } else if (reply == STOP){
             start = 0;
           }
+           memset(_buffer, 0, bufferSize);
         }
   
         while(!Serial1.available()){
@@ -283,6 +284,7 @@ void sendDataToRaspberryPi(void *p){
           } else if (reply == STOP){
             start = 0;
           }
+          memset(_buffer, 0, bufferSize);
         }
       } else {
         int reply;
