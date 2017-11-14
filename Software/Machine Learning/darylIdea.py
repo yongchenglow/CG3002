@@ -4,6 +4,7 @@ import socket
 import base64
 import serial
 import queue
+import csv
 from Crypto.Cipher import AES
 from Crypto import Random
 
@@ -17,8 +18,8 @@ from sklearn.metrics import confusion_matrix
 from sklearn.externals import joblib
 import ML_FUNCTIONS as ml
 
-training_label_list = pd.read_csv("y_list.csv")
-training_feature_list = pd.read_csv("time_feature_list.csv")
+training_label_list = pd.read_csv("fever_y_list.csv")
+training_feature_list = pd.read_csv("fever_feature_list.csv")
 
 ##### Training and Validation ####
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(training_feature_list,
@@ -124,6 +125,14 @@ def dataFromArduino():
         queue.put([dataList[2], dataList[3], dataList[4],
                    dataList[6], dataList[7], dataList[8],
                    dataList[10], dataList[11], dataList[12]])
+        
+        '''with open('data.csv','a') as file:
+            writer = csv.writer(file)
+            data = [dataList[2], dataList[3], dataList[4],
+                    dataList[6], dataList[7], dataList[8],
+                    dataList[10], dataList[11], dataList[12]]
+            writer.writerow(data)'''
+    
         #print('Successful Transmission')
         sampleSize = 1
         cumVoltage = dataList[14]
@@ -190,10 +199,10 @@ while (True):
         totalRunTime += 1
         div = totalRunTime * 1000
         
-        voltage = round((cumulativeVoltage/div)/1000,2)
-        current = round((cumulativeCurrent/div)/1000,2)
-        power = round((cumulativePower/div)/1000,2)
-        cumPower = round(((cumulativePower/div)/1000)*(totalTime/1000/60/60),2)
+        voltage = round((cumulativeVoltage/div)/1000,3)
+        current = round((cumulativeCurrent/div)/1000,3)
+        power = round((cumulativePower/div)/1000,3)
+        cumPower = round(((cumulativePower/div)/1000)*(totalTime/1000/60/60),5)
         dataToServer(action, voltage, current, power, cumPower)
         print(time.time() - start)
         start = time.time()

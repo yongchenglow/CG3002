@@ -89,23 +89,6 @@ def result_output(result):
             '10': 'window360'
             }
     return action_map[result]
-
-
-    return action_map[result]
-'''def result_output(result):
-    action_map = {
-            '0': 'Wavehands',
-            '1': 'Busdriver',
-            '2': 'Frontback',
-            '3': 'Sidestep',
-            '4': 'Jumping',
-            '5': 'Jumpingjacks',
-            '6': 'Turnclap',
-            '7': 'Squaturnclap',
-            '8': 'Window',
-            '9': 'windowSpin'
-            }
-    return action_map[result]'''
     
 def final_check(array, move):
     count = 0 
