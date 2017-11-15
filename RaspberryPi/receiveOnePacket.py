@@ -40,24 +40,55 @@ while handshake_flag:
 while numberOfSamples < sampleSize:
     # Variables
     checkSum = 0
-    dataList = []
+    dataList = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     length = 18
     
     number1 = ser.read()
     number2 = ser.read()
     packetNumber = int.from_bytes(number2+number1, byteorder='big', signed=True)
+    
+    code1 = ser.read()
+    code2 = ser.read()
+    packetCode = int.from_bytes(code2+code1, byteorder='big', signed=True)
+    
+    id1 = ser.read()
+    id2 = ser.read()
+    accelerometer1code = int.from_bytes(id2+id1, byteorder='big', signed=True)
+    
+    if(packetCode != 4 and accelerometer1code != 0):
+        print('Out of sync')
+        ser.write(NACK)
+        
+        # discard all the values
+        prev = 0
+        while True:
+            discard1 = ser.read()
+            discard2 = ser.read()
+            receive = int.from_bytes(discard2+discard1, byteorder='big', signed=True)
+            if(receive == 0 and prev == 4):
+                dataList[0] = prev
+                dataList[1] = receive
+                break
+            else:
+                prev = receive
+    else:
+        dataList[0] = packetCode
+        dataList[1] = accelerometer1code
+    
+    checkSum = checkSum ^ dataList[0]
+    checkSum = checkSum ^ dataList[1]
     # Read in the other values of the Data Packet
-    for i in range(0, length):
+    for i in range(2, length):
         item1 = ser.read()
         item2 = ser.read()
         item = int.from_bytes(item2 + item1, byteorder='big', signed=True)      # Read in the data send by the Arduino
-        dataList.append(item)          # Store the data into a list
-        checkSum = checkSum ^ item      # Calculate the checksum by taking XOR
+        dataList[i] = item                                                      # Store the data into a list
+        checkSum = checkSum ^ item                                              # Calculate the checksum by taking XOR
     
     # Read in the Checksum
     check1 = ser.read()
     check2 = ser.read()
-    dataList.append(int.from_bytes(check2 + check1, byteorder='big', signed=True))
+    dataList[length] = (int.from_bytes(check2 + check1, byteorder='big', signed=True))
     
     #print(dataList) 
     #print(checkSum) 
@@ -65,8 +96,6 @@ while numberOfSamples < sampleSize:
     if (dataList[length] == checkSum):
         ser.write(ACK)                  # Send ACK to arduino if everything is received
         print('Successful Transmission')
-        #print(dataList)                 # For Debugging/Demo purposes
-        #print(checkSum)                 # For Debugging/Demo purposes
         with open('data.csv','a') as file:
             writer = csv.writer(file)
             data = [dataList[2], dataList[3], dataList[4],
@@ -84,8 +113,8 @@ while numberOfSamples < sampleSize:
         print('Transmission Failed')
         ser.write(NACK)                 # Send NACK if an kind of error occurs
         
-print('Average Voltage: ', round((cumilativeVoltage/numberOfSamples),2), 'mV')
-print('Average Current: ', round((cumilativeCurrent/numberOfSamples),2), 'mA')
-print('Average Power: ', round((cumilativePower/numberOfSamples),2), 'W')
-energyConsumption = round((cumilativePower/numberOfSamples)*(totalTime/1000/60/60),2)
-print('Energy Comsumption: ', energyConsumption, 'kWh')
+print('Average Voltage: ', round((cumilativeVoltage/numberOfSamples)/1000,2), 'V')
+print('Average Current: ', round((cumilativeCurrent/numberOfSamples)/1000,2), 'A')
+print('Average Power: ', round((cumilativePower/numberOfSamples)/1000,2), 'W')
+energyConsumption = round(((cumilativePower/numberOfSamples)/1000)*(totalTime/1000/60/60),2)
+print('Energy Comsumption: ', energyConsumption, 'Wh')

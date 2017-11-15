@@ -10,10 +10,7 @@
 #include <arduino2.h>
 #include <I2Cdev.h>
 #include <MPU6050.h>
-
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    #include <Wire.h>
-#endif
+#include <Wire.h>
 
 #define STACK_SIZE    200
 
@@ -37,20 +34,6 @@ typedef struct DataPacket{
   int16_t timeTaken;
 } DataPacket;
 
-// Class default I2C address is AD0 low = 0x68
-MPU6050 accelgyro(0x68);
-
-const int bufferSize = 20;
-int16_t _buffer[bufferSize][20];
-int frontOfBuffer = 0;
-int backOfBuffer = 0;
-int bufferFullFlag = 0;
-int start = 0;
-int16_t idleTime = 0;
-unsigned long cumilativeIdleVoltage = 0;
-unsigned long cumilativeIdleCurrent = 0;
-DataPacket data;
-
 // Device ID
 int16_t ARM_ID = 0, GYRO_ID = 1, THIGH_ID = 2, POWER_ID = 3;
 
@@ -59,6 +42,12 @@ int16_t ACK = 0, NAK = 1, HELLO = 2, READ = 3, WRITE = 4, DATA_RESP = 5, STOP = 
 
 // Create Sempaphore
 SemaphoreHandle_t semaphore = xSemaphoreCreateBinary();
+
+// Class default I2C address is AD0 low = 0x68
+MPU6050 accelgyro;
+
+// Create Data Structure
+DataPacket data;
 
 // Constants
 const int CURRENT_SENSOR_PIN = A0;    // Input pin for measuring Volt
@@ -71,6 +60,32 @@ const GPIO_pin_t accThird = DP31;
 const TickType_t xPeriod = 16;
 float currentSensorValue = 0;
 float voltageSensorValue = 0;
+
+// Used for the start and stop of the system
+int start = 0;
+int16_t idleTime = 0;
+unsigned long cumilativeIdleVoltage = 0;
+unsigned long cumilativeIdleCurrent = 0;
+
+// Buffer
+const int bufferSize = 20;
+DataPacket _buffer[bufferSize];
+int frontOfBuffer = 0;
+int backOfBuffer = 0;
+int bufferFullFlag = 0;
+int numberOfPacketsInBuffer;
+
+// Window
+const int16_t windowSize = 5;
+int16_t window[windowSize][20];
+int frontOfWindow = 0;
+int backOfWindow = 0;
+int windowFullFlag = 0;
+int packetsWaitingForACK = 0;
+
+// Unacknowledge Packets
+int unacknowledgePacketNumbers[windowSize];
+int numberOfUnacknowledgePackets = 0;
 
 // Function to initialise the data packet siwth some values
 void initializeDataPacket(){
@@ -89,8 +104,17 @@ void handshake() {
   while (handshake_flag == 1) {
     if (Serial1.available()) {
       reply = Serial1.read();
+      
       if (reply == HELLO) {
-        Serial1.write(ACK);
+        // Send An ACK followed by the window size
+        byte buf[2];
+        buf[0] = ACK & 255;
+        buf[1] = (ACK >> 8) & 255;
+        Serial1.write(buf, sizeof(buf));
+
+        buf[0] = windowSize & 255;
+        buf[1] = (windowSize >> 8) & 255;
+        Serial1.write(buf, sizeof(buf));
       }
       if (reply == ACK) {
         handshake_flag = 0;
@@ -100,10 +124,10 @@ void handshake() {
   }
 }
 
-// Functiont to Seriallize the data packet
+// Functiont to Serialize the data packet
 void Serialize(int16_t *packet){
   int16_t checksum = 0;
-  packet[0] = backOfBuffer;
+  packet[0] = backOfWindow;
   memcpy(packet+1, &data, (size_t) sizeof(data));
   for(int i = 1; i < 19; i++)
     checksum ^= packet[i];
@@ -115,7 +139,7 @@ void Serialize(int16_t *packet){
  * Function to read data from all sensors
  * Hand Accelerometer, Gyroscope, Thigh Accelerometer
  */
-void readDataFromSensors(){
+void ReadDataFromSensors(){
   // Obtain Gyroscope Reading
   digitalWrite2f(gyroFirst, LOW);
   digitalWrite2f(accThird, HIGH);
@@ -136,10 +160,10 @@ void readDataFromSensors(){
  * Task to read data from the power circuit
  * Variables obtained: Voltage and Current
  */
-void readDataFromPowerCircuit(){
+void ReadDataFromPowerCircuit(){
   // Read Raw values from the INA169 board and voltage divider
-  currentSensorValue = analogRead(CURRENT_SENSOR_PIN);
-  voltageSensorValue = analogRead(VOLTAGE_SENSOR_PIN);
+  float currentSensorValue = analogRead(CURRENT_SENSOR_PIN);
+  float voltageSensorValue = analogRead(VOLTAGE_SENSOR_PIN);
   
   // Remap the ADC value into a voltage number (5V reference)
   currentSensorValue = (currentSensorValue * VOLTAGE_REF) / 1023;
@@ -147,20 +171,20 @@ void readDataFromPowerCircuit(){
   
   // Voltage reading is obtained from divider.
   // Multiply reading by 2 to get the true voltage value of the batteries
-  data.voltage = int16_t((voltageSensorValue * 2)*1000);
+  data.voltage = voltageSensorValue * 2 *1000;
   
   // Follow the equation given by the INA169 datasheet to
   // determine the current flowing through RS. Assume RL = 10k
   // Is = (Vout x 1k) / (RS x RL)
-  data.current = int16_t((currentSensorValue / (10 * RS))*1000);
+  data.current = (currentSensorValue / (10 * RS))*1000;
   
   // Power = Voltage * Current
-  data.power = int16_t((voltageSensorValue * 2 * (currentSensorValue / (10 * RS)))*1000);
+  data.power = (voltageSensorValue * 2 * (currentSensorValue / (10 * RS)))*1000;
 
   // Calculate the time taken in miliseconds taken for the cycle
   data.timeTaken = xPeriod/2;
 
-  if(idleTime != 0){
+  if(start == 0){
     cumilativeIdleVoltage += data.voltage;
     cumilativeIdleCurrent += data.current;
     data.timeTaken = data.timeTaken + idleTime;
@@ -176,20 +200,32 @@ void readDataFromPowerCircuit(){
 /**
  * Function to read and Package the data
  */
-void readAndPackageData(){
+void ReadAndPackageData(){
   // Read the data if the buffer is not full
   if(bufferFullFlag == 0){
-    readDataFromSensors();
-    readDataFromPowerCircuit();
-    Serialize(_buffer[backOfBuffer]);
-    backOfBuffer = (backOfBuffer + 1)%bufferSize;
+    ReadDataFromSensors();
+    ReadDataFromPowerCircuit();
+  } else {
+    Serial.println("Buffer Full");
   }
 
-  // Warns the system if the buffer is full
-  if((backOfBuffer + 1)%bufferSize == frontOfBuffer){
-    bufferFullFlag = 1;
+  if(windowFullFlag == 0){
+    Serialize(window[backOfWindow]);
+    backOfWindow = (backOfWindow + 1) % windowSize;
+    if((backOfWindow + 1) % windowSize == frontOfWindow)
+      windowFullFlag = 1;
+    else
+      windowFullFlag = 0;      
   } else {
-    bufferFullFlag = 0;
+    DataPacket temp = data;
+    _buffer[backOfBuffer] = temp;
+    backOfBuffer = (backOfBuffer + 1)%bufferSize;
+
+    // Update the Buffer Full flag
+    if((backOfBuffer + 1) % bufferSize == frontOfBuffer){
+      bufferFullFlag = 1;
+    }else
+      bufferFullFlag = 0; 
   }
 }
 
@@ -197,12 +233,12 @@ void readAndPackageData(){
  * Task to read data at full cycle
  * Task is to be read before sending
  */
-void readDataAtFullCycle(void *p){
+void ReadDataAtFullCycle(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
       if(start == 1){
-        readAndPackageData();
+        ReadAndPackageData();
       }
       xSemaphoreGive(semaphore);
     }
@@ -212,15 +248,14 @@ void readDataAtFullCycle(void *p){
 
 /**
  * Task to read data every half cycle
- * readDataAtHalfCycle
  */
-void readDataAtHalfCycle(void *p){
+void ReadDataAtHalfCycle(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
   vTaskDelayUntil(&xLastWakeTime, (xPeriod/2)/ portTICK_PERIOD_MS);
   for(;;){
-    if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
+    if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){      
       if(start == 1){      
-        readAndPackageData();
+        ReadAndPackageData();
       }
       xSemaphoreGive(semaphore);
     }
@@ -234,69 +269,123 @@ void readDataAtHalfCycle(void *p){
  *  1) Package Data
  *  2) Send Packaged Data to RasberryPi
  */
-void sendDataToRaspberryPi(void *p){
+void SendDataToRaspberryPi(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
       if(start == 1){
-        int trys = 0;
-        int reply;
-        int numberOfPacketsInBuffer;
-  
-        if(frontOfBuffer < backOfBuffer){
+        // Check if there are any avialable ACKs
+        while (Serial1.available()) {
+          // Read and split the message
+          int reply = Serial1.read();
+          int number = Serial1.read();
+
+          Serial.print("Packet Number: ");
+          Serial.println(number);
+          
+          if (reply == ACK && numberOfUnacknowledgePackets == 0) {
+            // After this front of window will == number
+            while(frontOfWindow != number){
+              frontOfWindow = (frontOfWindow+1)% windowSize;
+              packetsWaitingForACK--;
+            }
+
+            // Add 1 to the front of window
+            frontOfWindow = (frontOfWindow+1)% windowSize;
+            packetsWaitingForACK--;
+          } else if (reply == STOP){
+            start = 0;
+            break;
+          } else if (reply == NAK){
+            // For NACK
+            unacknowledgePacketNumbers[numberOfUnacknowledgePackets] = number;
+            numberOfUnacknowledgePackets++;
+            break;
+          }
+        }
+
+        if(frontOfBuffer <= backOfBuffer){
           numberOfPacketsInBuffer = backOfBuffer - frontOfBuffer;
         } else {
           numberOfPacketsInBuffer = backOfBuffer + bufferSize - frontOfBuffer;
         }
-  
-        for(int i = 0; i < numberOfPacketsInBuffer; i++){
-          Serial.print("[");
-          for(int j = 0; j < 20; j++){
+
+        // Update the windowFullFlag
+        if((backOfWindow + 1) % windowSize == frontOfWindow)
+          windowFullFlag = 1;
+        else 
+          windowFullFlag = 0;
+        
+        // Add data in the window if there is space
+        while(numberOfPacketsInBuffer > 0 && windowFullFlag == 0){
+          data = _buffer[frontOfBuffer];
+          Serialize(window[backOfWindow]);
+          backOfWindow = (backOfWindow + 1) % windowSize;
+          frontOfBuffer = (frontOfBuffer + 1) % bufferSize;
+          numberOfPacketsInBuffer--;
+
+          // Update the windowFullFlag
+          if((backOfWindow + 1) % windowSize == frontOfWindow)
+            windowFullFlag = 1;
+          else 
+            windowFullFlag = 0;
+        }
+
+        int numberOfPacketsInWindow;
+        if(frontOfWindow <= backOfWindow){
+          numberOfPacketsInWindow = backOfWindow - frontOfWindow;
+        } else {
+          numberOfPacketsInWindow = backOfWindow + windowSize - frontOfWindow;
+        }
+        
+        Serial.print("Number of packets in buffer: ");
+        Serial.println(numberOfPacketsInBuffer);
+        Serial.print("Number of packets in window: ");
+        Serial.println(numberOfPacketsInWindow);
+        Serial.print("Number of unacknowledge packets: ");
+        Serial.println(numberOfUnacknowledgePackets);
+        
+        // Send packets inside the window when there are no unacknowledge packets
+        if(numberOfUnacknowledgePackets == 0){
+          for(int i = packetsWaitingForACK; i < numberOfPacketsInWindow; i++){
+            Serial.print("[");
+            // If the number of packets in the window is less than the max windowSize
+            for(int j = 0; j < 20; j++){
               byte buf[2];
-              buf[0] = _buffer[(frontOfBuffer+i)%bufferSize][j] & 255;
-              buf[1] = (_buffer[(frontOfBuffer+i)%bufferSize][j] >> 8) & 255;
+              buf[0] = window[(frontOfWindow+i) % windowSize][j] & 255;
+              buf[1] = (window[(frontOfWindow+i) % windowSize][j] >> 8) & 255;
               Serial1.write(buf, sizeof(buf));
-              Serial.print(_buffer[(frontOfBuffer+i)%bufferSize][j]);
+              Serial.print(window[(frontOfWindow+i)%windowSize][j]);
               Serial.print(", ");
+            }
+            Serial.println("]"); 
           }
-          Serial.println("]");
-        }
-  
-        while(!Serial1.available()){
-          
-        }
-        
-        if (Serial1.available()) {
-          reply = Serial1.read();
-          if (reply == ACK) {
-            frontOfBuffer = (frontOfBuffer+1)%10;
-          } else if (reply == STOP){
-            start = 0;
+          packetsWaitingForACK += (numberOfPacketsInWindow-packetsWaitingForACK);
+        } else {
+          // Send the packets that has not been unacknowledge
+          for(int x = 0; x < numberOfUnacknowledgePackets ; x++){
+            Serial.print("[");
+            for(int y = 0; y < 20; y++){
+                byte buf[2];
+                buf[0] = window[(unacknowledgePacketNumbers[x]+x) % windowSize][y] & 255;
+                buf[1] = (window[(unacknowledgePacketNumbers[x]+x)% windowSize][y] >> 8) & 255;
+                Serial1.write(buf, sizeof(buf));
+                Serial.print(window[(frontOfWindow+x) % windowSize][y]);
+                Serial.print(", ");
+            }
+            Serial.println("]");
           }
-        }
-  
-        while(!Serial1.available()){
-          
-        }
-        
-        if (Serial1.available()) {
-          reply = Serial1.read();
-          if (reply == ACK) {
-            frontOfBuffer = (frontOfBuffer+1)%10;
-          } else if (reply == STOP){
-            start = 0;
-          }
+          numberOfUnacknowledgePackets = 0;
         }
       } else {
-        int reply;
         if (Serial1.available()){
-          reply = Serial1.read();
+          int reply = Serial1.read();
           if(reply == ACK){
             start = 1;
           }
         }
 
-        readDataFromPowerCircuit();
+        ReadDataFromPowerCircuit();
         idleTime += 16;
         cumilativeIdleVoltage += data.voltage;
         cumilativeIdleCurrent += data.current;
@@ -314,7 +403,7 @@ void setup() {
   #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
       Fastwire::setup(400, true);
   #endif
-  
+
   Serial1.begin(115200);
   Serial.begin(115200);
     
@@ -335,6 +424,7 @@ void setup() {
   digitalWrite2f(accThird, HIGH);
 
   handshake();
+  
   /*
    * MPU6050_ACCEL_FS_2          0x00
    * MPU6050_ACCEL_FS_4          0x01
@@ -365,9 +455,9 @@ void setup() {
   xSemaphoreGive(semaphore);
   
   // Create Tasks
-  xTaskCreate(readDataAtFullCycle, "readDataAtFullCycle", STACK_SIZE, (void *) NULL, 3, NULL);
-  xTaskCreate(readDataAtHalfCycle, "readDataAtHalfCycle", STACK_SIZE, (void *) NULL, 2, NULL);
-  xTaskCreate(sendDataToRaspberryPi, "sendDataToRaspberryPi", STACK_SIZE, (void *) NULL, 1, NULL);
+  xTaskCreate(ReadDataAtFullCycle, "ReadDataAtFullCycle", STACK_SIZE, (void *) NULL, 3, NULL);
+  xTaskCreate(ReadDataAtHalfCycle, "ReadDataAtHalfCycle", STACK_SIZE, (void *) NULL, 2, NULL);
+  xTaskCreate(SendDataToRaspberryPi, "SendDataToRaspberryPi", STACK_SIZE, (void *) NULL, 1, NULL);
   vTaskStartScheduler();
 }
 
