@@ -78,7 +78,7 @@ def learn(X):
     print(result)'''
     
     X = preprocessing.normalize(X) #normalize the dataset
-    X = ml.segment_signal(X, 100) #segmentation to 3d for feature extraction   
+    X = ml.segment_signal(X, 200) #segmentation to 3d for feature extraction   
     time_feature_list = []
     time_feature_list = ml.time_features(X, time_feature_list) #feature extraction and conver to 2d
     ##### Predict #####
@@ -115,7 +115,7 @@ def dataFromArduino():
     check2 = ser.read()
     arduinoChecksum = int.from_bytes(check2 + check1, byteorder='big', signed=True)
             
-    #print(dataList) 
+    print(dataList) 
     
     if (arduinoChecksum == checkSum):
         ser.write(ACK)                  # Send ACK to arduino if everything is received
@@ -142,7 +142,7 @@ def dataFromArduino():
         
     else:
         print('Transmission Failed')
-        sampleSize = 1
+        sampleSize = 0
         cumVoltage = 0
         cumCurrent = 0
         cumPower = 0
@@ -186,10 +186,11 @@ while (True):
     cumulativeVoltage += results['cumVoltage']
     cumulativePower += results['cumPower']
     totalTime += results['totalTime']
-    if(size % 100 == 0):
-        print(size)
+    '''if(size % 100 == 0):
+        print(size)'''
         
     if (size == 1000):
+        print(size)
         rawData = []
         while (size > 0):
             rawData.append(queue.get())

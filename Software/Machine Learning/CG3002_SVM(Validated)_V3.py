@@ -25,7 +25,7 @@ start = time.time()
 
 #df = pd.read_csv('/home/pi/Desktop/CG3002/Software/DanceDanceData/data311017/Consolidated_311017.csv') 
 
-df = pd.read_csv('file:///C:/Users/Daryl/Desktop/CG3002_DANCE_DANCE/CG3002/Software/DanceDanceData/data091117/Consolidated_Arrow_091117.csv') 
+df = pd.read_csv('/home/pi/Desktop/CG3002/Software/Machine Learning/data151117/Consolidated_Fever_151117.csv') 
 
 
 ##### label encoder #####
@@ -42,7 +42,7 @@ X = np.array(df.drop(['LABELS'], 1)) #removing labels
 X = preprocessing.normalize(X) #normalize the dataset
 
 ##### segmentation #####
-segmented_df = segment_signal(X, 50)
+segmented_df = segment_signal(X, 200)
 
 ##### time feature #####
 time_feature_list = []       
@@ -51,7 +51,7 @@ time_feature_list = time_features(segmented_df, time_feature_list)
 ##### labels #####
 y_list = []
 y = y.reshape(df.shape[0], 1)
-y = segment_signal(y, 50)
+y = segment_signal(y, 200)
 
 nLayers = y.shape[0]
 nRows = y.shape[1]
@@ -71,8 +71,8 @@ y_list = np.floor(y_list)
 
 time_feature_list = pd.DataFrame(time_feature_list)
 y_list = pd.DataFrame(y_list)
-time_feature_list.to_csv("arrow_feature_list.csv")
-y_list.to_csv("arrow_y_list.csv")
+time_feature_list.to_csv("fever_feature_list2.csv")
+y_list.to_csv("fever_y_list2.csv")
 
 '''##### Training and Validation #####
 X_train, X_test, y_train, y_test = cross_validation.train_test_split(time_feature_list,
