@@ -14,10 +14,6 @@
 
 #define STACK_SIZE    200
 
-// Fast AnalogRead
-#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
-#define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
-
 // DataPacket Structure
 typedef struct DataPacket{
   int16_t type;
@@ -126,7 +122,7 @@ void readDataFromSensors(){
 }
 
 /**
- * Task to read data from the power circuit
+ * Function to read data from the power circuit
  * Variables obtained: Voltage, Current, Power, TimeTaken
  */
 void readDataFromPowerCircuit(){
@@ -178,12 +174,49 @@ void readAndPackageData(){
 }
 
 /**
- * Task to Read and Package data
- * Task is execute at Full Cycle
- * Task is to be read before sending
+ * Function to put the MCU to sleep
+ * Does not disable any interrupts and block processing
  */
-void readDataAtFullCycle(void *p){
+void sleep (){
+  // Digital Input Disable on Analogue Pins
+  #if defined(__AVR_ATmega640__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__) // Mega with 2560
+  DIDR0 = 0xFF;
+  DIDR2 = 0xFF;
+  #elif defined(__AVR_ATmega644P__) || defined(__AVR_ATmega644PA__) || defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega1284PA__) // Goldilocks with 1284p
+  DIDR0 = 0xFF;
+  
+  #elif defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__) || defined(__AVR_ATmega8__) // assume we're using an Arduino with 328p
+  DIDR0 = 0x3F;
+  
+  #elif defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega16U4__) // assume we're using an Arduino Leonardo with 32u4
+  DIDR0 = 0xF3;
+  DIDR2 = 0x3F;
+  #endif
+  
+  // Analogue Comparator Disable
+  ACSR &= ~_BV(ACIE);
+  ACSR |= _BV(ACD);
+  
+  set_sleep_mode( SLEEP_MODE_IDLE );
+  portENTER_CRITICAL();
+  sleep_enable();
+  
+  #if defined(BODS) && defined(BODSE)
+  sleep_bod_disable();
+  #endif
+  
+  portEXIT_CRITICAL();
+  sleep_cpu();
+  sleep_reset();
+}
+
+/**
+ * Task to Read and Package data
+ * Task is executed at Half Cycle
+ */
+void readDataAtHalfCycle(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
+  vTaskDelayUntil(&xLastWakeTime, (PERIOD/2)/ portTICK_PERIOD_MS);
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
       readAndPackageData();
@@ -195,11 +228,11 @@ void readDataAtFullCycle(void *p){
 
 /**
  * Task to Read and Package data
- * Task is executed at Half Cycle
+ * Task is execute at Full Cycle
+ * Task is to be read before sending
  */
-void readDataAtHalfCycle(void *p){
+void readDataAtFullCycle(void *p){
   TickType_t xLastWakeTime = xTaskGetTickCount();
-  vTaskDelayUntil(&xLastWakeTime, (PERIOD/2)/ portTICK_PERIOD_MS);
   for(;;){
     if(xSemaphoreTake(semaphore, (TickType_t) portMAX_DELAY) == pdTRUE){
       readAndPackageData();
@@ -316,8 +349,8 @@ void setup() {
   xSemaphoreGive(semaphore);
   
   // Create Tasks
-  xTaskCreate(readDataAtFullCycle, "readDataAtFullCycle", STACK_SIZE, (void *) NULL, 3, NULL);
-  xTaskCreate(readDataAtHalfCycle, "readDataAtHalfCycle", STACK_SIZE, (void *) NULL, 2, NULL);
+  xTaskCreate(readDataAtHalfCycle, "readDataAtHalfCycle", STACK_SIZE, (void *) NULL, 3, NULL);
+  xTaskCreate(readDataAtFullCycle, "readDataAtFullCycle", STACK_SIZE, (void *) NULL, 2, NULL);
   xTaskCreate(sendDataToRaspberryPi, "sendDataToRaspberryPi", STACK_SIZE, (void *) NULL, 1, NULL);
   vTaskStartScheduler();
 }
@@ -326,34 +359,5 @@ void setup() {
  * Loop method to reduce power
  */
 void loop() {
-  // Digital Input Disable on Analogue Pins
-  #if defined(__AVR_ATmega640__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__) // Mega with 2560
-  DIDR0 = 0xFF;
-  DIDR2 = 0xFF;
-  #elif defined(__AVR_ATmega644P__) || defined(__AVR_ATmega644PA__) || defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega1284PA__) // Goldilocks with 1284p
-  DIDR0 = 0xFF;
-   
-  #elif defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__) || defined(__AVR_ATmega8__) // assume we're using an Arduino with 328p
-  DIDR0 = 0x3F;
-   
-  #elif defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega16U4__) // assume we're using an Arduino Leonardo with 32u4
-  DIDR0 = 0xF3;
-  DIDR2 = 0x3F;
-  #endif
-   
-  // Analogue Comparator Disable
-  ACSR &= ~_BV(ACIE);
-  ACSR |= _BV(ACD);
-   
-  set_sleep_mode( SLEEP_MODE_IDLE );
-  portENTER_CRITICAL();
-  sleep_enable();
-  
-  #if defined(BODS) && defined(BODSE)
-  sleep_bod_disable();
-  #endif
-   
-  portEXIT_CRITICAL();
-  sleep_cpu();
-  sleep_reset();
+  sleep();
 }
