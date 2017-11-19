@@ -77,34 +77,18 @@ def butter_lowpass_filtfilt(data, cutoff, fs, order):
 def result_output(result):
     action_map = {
             '0': 'busdriver',
-            '1': 'frontback',
-            '2': 'jumping',
-            '3': 'jumpingjack',
-            '4': 'sidestep',
-            '5': 'squatturnclap',
-            '6': 'turnclap',
-            '7': 'wavehands',
-            '8': 'window',
-            '9': 'window360'
+            '1': 'logout',
+            '2': 'frontback',
+            '3': 'jumping',
+            '4': 'jumpingjack',
+            '5': 'sidestep',
+            '6': 'squatturnclap',
+            '7': 'turnclap',
+            '8': 'wavehands',
+            '9': 'windowcleaning',
+            '10': 'windowcleaner360'
             }
     return action_map[result]
-
-
-    return action_map[result]
-'''def result_output(result):
-    action_map = {
-            '0': 'Wavehands',
-            '1': 'Busdriver',
-            '2': 'Frontback',
-            '3': 'Sidestep',
-            '4': 'Jumping',
-            '5': 'Jumpingjacks',
-            '6': 'Turnclap',
-            '7': 'Squaturnclap',
-            '8': 'Window',
-            '9': 'windowSpin'
-            }
-    return action_map[result]'''
     
 def final_check(array, move):
     count = 0 
