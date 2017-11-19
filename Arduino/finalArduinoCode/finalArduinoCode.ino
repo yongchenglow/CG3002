@@ -90,9 +90,9 @@ void handshake() {
 }
 
 /**
- * Function to Serialize the data packet
+ * Function to serialize the data packet
  */// Functiont to Seriallize the data packet
-void Serialize(int16_t *packet){
+void serialize(int16_t *packet){
   int16_t checksum = 0;
   memcpy(packet, &data, (size_t) sizeof(data));
   for(int i = 0; i < 18; i++)
@@ -161,7 +161,7 @@ void readAndPackageData(){
   if(bufferFullFlag == 0){
     readDataFromSensors();
     readDataFromPowerCircuit();
-    Serialize(_buffer[backOfBuffer]);
+    serialize(_buffer[backOfBuffer]);
     backOfBuffer = (backOfBuffer + 1)%BUFFER_SIZE;
   }
 
