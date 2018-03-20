@@ -7,10 +7,13 @@
 #include <queue.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "arduino2.h"                                                                                                                                                                                                                                                                                                                                                                                              7
-#include "I2Cdev.h"
-#include "MPU6050.h"
-#include "Wire.h"
+#include <arduino2.h>
+#include <I2Cdev.h>
+#include <MPU6050.h>
+
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    #include <Wire.h>
+#endif
 
 #define STACK_SIZE    200
 
@@ -34,7 +37,10 @@ typedef struct DataPacket{
   int16_t timeTaken;
 } DataPacket;
 
-const int bufferSize = 10;
+// Class default I2C address is AD0 low = 0x68
+MPU6050 accelgyro(0x68);
+
+const int bufferSize = 20;
 int16_t _buffer[bufferSize][20];
 int frontOfBuffer = 0;
 int backOfBuffer = 0;
@@ -53,9 +59,6 @@ int16_t ACK = 0, NAK = 1, HELLO = 2, READ = 3, WRITE = 4, DATA_RESP = 5, STOP = 
 
 // Create Sempaphore
 SemaphoreHandle_t semaphore = xSemaphoreCreateBinary();
-
-// Class default I2C address is AD0 low = 0x68
-MPU6050 accelgyro;
 
 // Constants
 const int CURRENT_SENSOR_PIN = A0;    // Input pin for measuring Volt
@@ -270,6 +273,7 @@ void sendDataToRaspberryPi(void *p){
           } else if (reply == STOP){
             start = 0;
           }
+           memset(_buffer, 0, bufferSize);
         }
   
         while(!Serial1.available()){
@@ -283,6 +287,7 @@ void sendDataToRaspberryPi(void *p){
           } else if (reply == STOP){
             start = 0;
           }
+          memset(_buffer, 0, bufferSize);
         }
       } else {
         int reply;
@@ -311,6 +316,17 @@ void setup() {
   #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
       Fastwire::setup(400, true);
   #endif
+  
+  Serial1.begin(115200);
+  Serial.begin(115200);
+    
+  accelgyro.initialize();
+  accelgyro.setFullScaleGyroRange(MPU6050_ACCEL_FS_4);
+  accelgyro.setFullScaleAccelRange(MPU6050_GYRO_FS_500);
+  accelgyro.setDLPFMode(3);
+
+  Serial.println("Testing device connections...");
+  Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 
   pinMode2f(gyroFirst, OUTPUT);
   pinMode2f(accSec, OUTPUT);
@@ -319,15 +335,8 @@ void setup() {
   digitalWrite2f(gyroFirst, HIGH);
   digitalWrite2f(accSec, HIGH);
   digitalWrite2f(accThird, HIGH);
-  
-  Serial1.begin(115200);
-  Serial.begin(115200);
-    
+
   handshake();
-  accelgyro.initialize();
-  accelgyro.setFullScaleGyroRange(MPU6050_ACCEL_FS_4);
-  accelgyro.setFullScaleAccelRange(MPU6050_GYRO_FS_500);
-  accelgyro.setDLPFMode(3);
   /*
    * MPU6050_ACCEL_FS_2          0x00
    * MPU6050_ACCEL_FS_4          0x01
